@@ -4,4 +4,4 @@ count=True
 max-line-length = 120
 extend-select = B, ANN
 max-complexity = 10
-exclude = env, build, dist, __pycache__, assets
+exclude = env, .venv, build, dist, __pycache__, assets, tests/fake_project

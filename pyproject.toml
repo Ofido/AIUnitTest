@@ -1,0 +1,58 @@
+[project]
+name = "AIUnitTest"
+version = "0.1.0"
+description = "CLI to automatically generate and update unit tests based on coverage"
+authors = [{ name = "Ofido" }]
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "Apache-2.0" }
+keywords = ["testing", "coverage", "openai", "automation"]
+
+[tool.black]
+line-length = 120
+target-version = ["py310"]
+exclude = '''
+/(
+    \.git
+  | \.mypy_cache
+  | \.venv
+  | _build
+  | build
+  | dist
+  | node_modules
+  | env
+  | .env
+  | venv
+  | .vscode
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 120
+multi_line_output = 3
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+ignore_missing_imports = true
+
+[tool.coverage.paths]
+source = ["src"]
+
+[tool.coverage.run]
+dynamic_context = "test_function"
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+exclude_also = [
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == '__main__':",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"

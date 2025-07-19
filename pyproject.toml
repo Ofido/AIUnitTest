@@ -1,57 +1,83 @@
 [project]
-name = "AIUnitTest"
+name = "auto-test-updater"
 version = "0.1.0"
-description = "CLI to automatically generate and update unit tests based on coverage"
+description = "CLI to generate and update Python unit tests automatically using coverage and AI"
 authors = [{ name = "Ofido" }]
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 keywords = ["testing", "coverage", "openai", "automation"]
 
 [tool.black]
 line-length = 120
-target-version = ["py310"]
-exclude = '''
-/(
-    \.git
-  | \.mypy_cache
-  | \.venv
-  | _build
-  | build
-  | dist
-  | node_modules
-  | env
-  | .env
-  | venv
-  | .vscode
-)/
-'''
+target-version = ["py313"]
 
 [tool.isort]
 profile = "black"
 line_length = 120
 multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+known_third_party = [
+  "openai",
+  "typer",
+  "isort",
+  "black",
+  "flake8",
+  "mypy",
+  "pytest",
+]
+known_first_party = ["ai_unit_test"]
+
+default_section = "THIRDPARTY"
+skip = ["build", "dist", ".venv", "env"]
+
+[tool.flake8-annotations]
+suppress-none-returning = true
+suppress-dummy-args = true
+allow-untyped-defs = true
 
 [tool.mypy]
 python_version = "3.13"
+check_untyped_defs = true
+ignore_missing_imports = false
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_any_generics = true
+allow_redefinition = false
+allow_untyped_globals = false
+follow_imports_for_stubs = true
+disallow_untyped_defs = true
 strict = true
-ignore_missing_imports = true
 
-[tool.coverage.paths]
-source = ["src"]
+[tool.pymarkdown]
+plugins.md013.enabled = true
+plugins.md013.line_length = 120
+plugins.md013.heading_line_length = 120
+plugins.md013.code_block_line_length = 120
+extensions.front-matter.enabled = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --strict-markers --tb=short --cov=src --cov-report=term-missing"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+markers = [
+  "slow: marks slow tests",
+  "integration: marks integration tests",
+  "benchmark: marks benchmarks",
+]
 
 [tool.coverage.run]
-dynamic_context = "test_function"
-source = ["src"]
 branch = true
+source = ["src"]
+omit = ["tests/*", "main.py"]
 
 [tool.coverage.report]
-exclude_also = [
-    "raise AssertionError",
-    "raise NotImplementedError",
-    "if 0:",
-    "if __name__ == '__main__':",
-]
+show_missing = true
+skip_covered = true
+fail_under = 80
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]

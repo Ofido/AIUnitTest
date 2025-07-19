@@ -1,0 +1,9 @@
+openai
+coverage
+pytest
+tomli
+black
+isort
+flake8
+mypy
+pymarkdown

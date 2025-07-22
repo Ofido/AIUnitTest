@@ -10,6 +10,7 @@ import typer
 from ai_unit_test.coverage_helper import collect_missing_lines
 from ai_unit_test.file_helper import (
     extract_function_source,
+    find_relevant_tests,
     find_test_file,
     read_file_content,
     write_file_content,
@@ -113,10 +114,7 @@ async def _process_missing_info(missing_info: dict[Path, list[int]], tests_folde
             continue
 
         # Read all other test files for context
-        other_tests_content = ""
-        for other_test_file in Path(tests_folder).rglob("test_*.py"):
-            if other_test_file != test_file:
-                other_tests_content += read_file_content(other_test_file) + "\n\n"
+        other_tests_content = find_relevant_tests(str(source_file_path), tests_folder)
 
         logger.info(f"Updating {test_file} for uncovered lines: {uncovered_lines_list}")
         try:
@@ -208,10 +206,7 @@ def func(
     test_code: str = read_file_content(test_file) or ""
 
     # Read all other test files for context
-    other_tests_content = ""
-    for other_test_file in Path(tests_folder).rglob("test_*.py"):
-        if other_test_file != test_file:
-            other_tests_content += read_file_content(other_test_file) + "\n\n"
+    other_tests_content = find_relevant_tests(file_path, tests_folder)
 
     logger.info(f"Updating {test_file} for function '{function_name}'.")
     try:

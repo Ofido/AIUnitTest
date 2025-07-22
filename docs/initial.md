@@ -63,6 +63,13 @@ Esta seção descreve a ideia inicial, objetivos e visão geral arquitetural do 
 
 6. Roadmap Futuro
 
+   - Fase 1: Melhoria de Contexto por Busca Simples
+     - Enriquecer o prompt do LLM com exemplos de testes existentes, encontrados por busca de texto simples.
+     - Isso aterra o modelo no estilo e nas convenções do projeto, melhorando a qualidade dos testes gerados.
+   - Fase 2: RAG com Módulo de Embedding Simplificado
+     - Implementar um sistema de busca semântica para encontrar os exemplos de testes mais relevantes.
+     - Criar um comando para indexar os testes existentes, gerando embeddings e salvando-os localmente.
+     - Utilizar a busca por similaridade de embeddings para encontrar os melhores exemplos para o prompt.
    - Suporte a múltiplos provedores de LLM.
    - Geração de mocks e fixtures automatizados.
    - Integração com pipelines de CI externos (GitHub Apps, GitLab CI).

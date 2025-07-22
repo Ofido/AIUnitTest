@@ -1,6 +1,7 @@
 import ast
 import logging
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +40,9 @@ def read_file_content(file_path: Path | str) -> str:
         return ""
 
 
-def write_file_content(file_path: Path, content: str) -> None:
+def write_file_content(file_path: Path, content: str, mode: str = "w") -> None:
     """Writes content to a file."""
-    with open(file_path, "w") as f:
+    with open(file_path, mode) as f:
         f.write(content)
 
 
@@ -57,3 +58,30 @@ def extract_function_source(file_path: str, function_name: str) -> str | None:
     except (FileNotFoundError, SyntaxError) as e:
         logger.error(f"Error reading or parsing {file_path}: {e}")
     return None
+
+
+def get_source_code_chunks(file_path: Path) -> list[dict[str, Any]]:
+    """
+    Extracts top-level classes and functions from a Python file as code chunks.
+    """
+    chunks: list[dict[str, Any]] = []
+    try:
+        file_content = read_file_content(file_path)
+        tree = ast.parse(file_content)
+
+        for node in tree.body:
+            if isinstance(node, (ast.ClassDef, ast.FunctionDef)):
+                source_segment = ast.get_source_segment(file_content, node)
+                if source_segment is not None:
+                    chunks.append(
+                        {
+                            "name": node.name,
+                            "type": "class" if isinstance(node, ast.ClassDef) else "function",
+                            "source_code": source_segment,
+                            "start_line": node.lineno,
+                            "end_line": node.end_lineno if hasattr(node, "end_lineno") else node.lineno,
+                        }
+                    )
+    except (FileNotFoundError, SyntaxError) as e:
+        logger.error(f"Error reading or parsing {file_path}: {e}")
+    return chunks

@@ -36,7 +36,9 @@ async def test_update_test_with_llm_success(mock_async_openai: MagicMock) -> Non
     coverage_lines = [1, 2]
     other_tests_content = ""
 
-    updated_content = await update_test_with_llm(source_code, test_code, file_name, coverage_lines, other_tests_content)
+    updated_content = await update_test_with_llm(
+        source_code, test_code, file_name, coverage_lines, other_tests_content, "pytest_function"
+    )
 
     assert updated_content == "updated test content"
     mock_async_openai.assert_called_once_with(api_key="test_key", base_url=None)
@@ -58,7 +60,9 @@ async def test_update_test_with_llm_api_error(mock_async_openai: MagicMock) -> N
     other_tests_content = ""
 
     with pytest.raises(Exception, match="API Error"):
-        await update_test_with_llm(source_code, test_code, file_name, coverage_lines, other_tests_content)
+        await update_test_with_llm(
+            source_code, test_code, file_name, coverage_lines, other_tests_content, "pytest_function"
+        )
 
 
 async def test_update_test_with_llm_no_api_key() -> None:
@@ -74,4 +78,6 @@ async def test_update_test_with_llm_no_api_key() -> None:
         other_tests_content = ""
 
         with pytest.raises(RuntimeError, match="Set the OPENAI_API_KEY environment variable with your OpenAI key."):
-            await update_test_with_llm(source_code, test_code, file_name, coverage_lines, other_tests_content)
+            await update_test_with_llm(
+                source_code, test_code, file_name, coverage_lines, other_tests_content, "pytest_function"
+            )

@@ -1,3 +1,4 @@
+import ast
 import asyncio
 import logging
 import sys
@@ -12,6 +13,7 @@ from ai_unit_test.file_helper import (
     extract_function_source,
     find_relevant_tests,
     find_test_file,
+    get_source_code_chunks,
     read_file_content,
     write_file_content,
 )
@@ -99,6 +101,28 @@ def _resolve_paths_from_config(
     return folders, tests_folder, coverage_file
 
 
+def _detect_test_style(test_file_path: Path) -> str:
+    """Detects if the test file uses unittest.TestCase classes or pytest functions."""
+    test_content = read_file_content(test_file_path)
+    if not test_content:
+        return "unknown"
+
+    try:
+        tree = ast.parse(test_content)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                for base in node.bases:
+                    if isinstance(base, ast.Attribute) and base.attr == "TestCase":
+                        return "unittest_class"
+                    elif isinstance(base, ast.Name) and base.id == "TestCase":
+                        return "unittest_class"
+        # If no TestCase classes are found, assume pytest function style
+        return "pytest_function"
+    except SyntaxError:
+        logger.warning(f"Could not parse test file {test_file_path} for style detection.")
+        return "unknown"
+
+
 async def _process_missing_info(missing_info: dict[Path, list[int]], tests_folder: str) -> None:
     for source_file_path, uncovered_lines_list in missing_info.items():
         logger.info(f"Processing source file: {source_file_path}")
@@ -107,24 +131,42 @@ async def _process_missing_info(missing_info: dict[Path, list[int]], tests_folde
             logger.warning(f"Test file not found for {source_file_path}, skipping.")
             continue
 
-        source_code: str | None = read_file_content(source_file_path)
-        test_code: str = read_file_content(test_file) or ""
-        if source_code is None:
-            logger.warning(f"Could not read source file {source_file_path}, skipping.")
-            continue
+        # Detect test style
+        test_style = _detect_test_style(test_file)
+        logger.debug(f"Detected test style for {test_file}: {test_style}")
+
+        # Get all logical chunks (classes and functions) from the source file
+        code_chunks = get_source_code_chunks(source_file_path)
 
         # Read all other test files for context
         other_tests_content = find_relevant_tests(str(source_file_path), tests_folder)
 
-        logger.info(f"Updating {test_file} for uncovered lines: {uncovered_lines_list}")
-        try:
-            updated_test: str = await update_test_with_llm(
-                source_code, test_code, str(source_file_path), uncovered_lines_list, other_tests_content
+        for chunk in code_chunks:
+            chunk_uncovered_lines = []
+            for line_num in uncovered_lines_list:
+                if chunk["start_line"] <= line_num <= chunk["end_line"]:
+                    chunk_uncovered_lines.append(line_num)
+
+            if not chunk_uncovered_lines:
+                continue  # No uncovered lines in this chunk, skip
+
+            logger.info(
+                f"Updating {test_file} for chunk '{chunk['name']}' "
+                f"(lines {chunk['start_line']}-{chunk['end_line']}) with uncovered lines: {chunk_uncovered_lines}"
             )
-            write_file_content(test_file, updated_test)
-            logger.info(f"✅ Test file updated successfully: {test_file}")
-        except Exception as exc:  # pragma: no cover
-            logger.error(f"Error updating {test_file}: {exc}")
+            try:
+                updated_test: str = await update_test_with_llm(
+                    chunk["source_code"],  # Pass chunk source code
+                    read_file_content(test_file) or "",  # Still pass the whole test file for context
+                    str(source_file_path),
+                    chunk_uncovered_lines,  # Pass chunk-specific uncovered lines
+                    other_tests_content,
+                    test_style,  # Pass the detected test style
+                )
+                write_file_content(test_file, updated_test, mode="a")  # Append the new test content
+                logger.info(f"✅ Test file updated successfully: {test_file}")
+            except Exception as exc:  # pragma: no cover
+                logger.error(f"Error updating {test_file}: {exc}")
 
 
 async def _main(
@@ -205,13 +247,17 @@ def func(
 
     test_code: str = read_file_content(test_file) or ""
 
+    # Detect test style
+    test_style = _detect_test_style(test_file)
+    logger.debug(f"Detected test style for {test_file}: {test_style}")
+
     # Read all other test files for context
     other_tests_content = find_relevant_tests(file_path, tests_folder)
 
     logger.info(f"Updating {test_file} for function '{function_name}'.")
     try:
         updated_test: str = asyncio.run(
-            update_test_with_llm(source_code, test_code, str(file_path), [], other_tests_content)
+            update_test_with_llm(source_code, test_code, str(file_path), [], other_tests_content, test_style)
         )
         write_file_content(test_file, updated_test)
         logger.info(f"✅ Test file updated successfully: {test_file}")

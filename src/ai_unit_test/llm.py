@@ -14,6 +14,7 @@ async def update_test_with_llm(
     file_name: str,
     coverage_lines: list[int],
     other_tests_content: str,
+    test_style: str,
 ) -> str:
     """Calls the chat model to generate the new test file."""
     logger.info(f"Updating test for {file_name} with LLM.")
@@ -30,13 +31,24 @@ async def update_test_with_llm(
 
     client: AsyncOpenAI = AsyncOpenAI(api_key=api_key_val, base_url=api_url)
 
-    system_msg: str = (
+    system_msg_base = (
         "You are an expert Python test developer. Your task is to write new unit tests to cover missing lines "
-        "in a given file. You must follow the style of existing tests provided as reference. "
-        "Your response must be the full, complete content of the updated test file. "
-        "Do not include any explanations, comments, or markdown formatting. "
+        "in a given code chunk. You must follow the style of existing tests provided as reference. "
+        "Your response must be only the new test code, without any explanations, comments, or markdown formatting. "
         "Your response must be only valid Python code."
     )
+
+    if test_style == "unittest_class":
+        system_msg_specific = (
+            "Generate a new test method to be added inside a `unittest.TestCase` class. "
+            "The method name should start with `test_` and it should accept `self` as its first argument."
+        )
+    elif test_style == "pytest_function":
+        system_msg_specific = "Generate a new test function. The function name should start with `test_`."
+    else:
+        system_msg_specific = "Generate a new test function or method, adapting to the existing test file's style."
+
+    system_msg = f"{system_msg_base} {system_msg_specific}"
 
     user_msg: str = f"""Here is the information for the test generation:
 
@@ -48,9 +60,9 @@ async def update_test_with_llm(
 {coverage_lines}
 </uncovered_lines>
 
-<source_code>
+<source_code_chunk>
 {source_code}
-</source_code>
+</source_code_chunk>
 
 <existing_tests>
 {test_code}

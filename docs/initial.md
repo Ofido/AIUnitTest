@@ -74,3 +74,15 @@ Esta seção descreve a ideia inicial, objetivos e visão geral arquitetural do 
    - Geração de mocks e fixtures automatizados.
    - Integração com pipelines de CI externos (GitHub Apps, GitLab CI).
    - Dashboard web para visualização de progressos de cobertura.
+
+   - Fase 3: Refatoração e Simplificação de Testes Existentes
+     - O LLM pode analisar testes existentes e sugerir refatorações para melhorar legibilidade, concisão e
+       aplicação de padrões de teste eficazes (ex: uso inteligente de `pytest.fixture`, simplificação de
+       asserções complexas, remoção de duplicação).
+     - Benefício: Melhoria da manutenibilidade dos testes.
+
+   - Fase 4: Geração Inteligente de Dados de Teste
+     - O LLM pode analisar a assinatura de funções, tipos, docstrings e código-fonte para sugerir ou gerar
+       dados de teste (valores para parâmetros, objetos mockados) que cubram casos de borda e diferentes
+       caminhos de execução.
+     - Benefício: Aumento da eficácia dos testes ao cobrir uma gama mais ampla de cenários.

@@ -13,6 +13,7 @@ async def update_test_with_llm(
     test_code: str,
     file_name: str,
     coverage_lines: list[int],
+    other_tests_content: str,
 ) -> str:
     """Calls the chat model to generate the new test file."""
     logger.info(f"Updating test for {file_name} with LLM.")
@@ -30,20 +31,45 @@ async def update_test_with_llm(
     client: AsyncOpenAI = AsyncOpenAI(api_key=api_key_val, base_url=api_url)
 
     system_msg: str = (
-        "You are a Python assistant specializing in unit tests. "
-        "You will receive the source code, the current test, and the uncovered lines. "
-        "Respond only with the complete new content of the test file, in valid Python."
+        "You are an expert Python developer specializing in writing high-quality, "
+        "effective unit tests. Your task is to improve an existing test file to "
+        "increase its test coverage.\n\n"
+        "You will be provided with:\n"
+        "1. The source code of a Python file.\n"
+        "2. The content of its corresponding test file.\n"
+        "3. A list of line numbers that are currently not covered by tests.\n"
+        "4. (Optional) The content of other test files from the same project to be "
+        "used as a style reference.\n\n"
+        "Your goal is to **update the existing test file** by adding new tests or "
+        "modifying existing ones to cover the specified `uncovered lines`.\n\n"
+        "**Instructions:**\n"
+        "- **Analyze the Style:** If other test files are provided, carefully "
+        "analyze their structure, mocking techniques (e.g., `unittest.mock`), "
+        "assertion styles (e.g., `assert`, `self.assertEqual`), and overall "
+        "organization. Apply this same style to the new tests you write.\n"
+        "- **Focus on Coverage:** Your primary goal is to write tests that execute "
+        "the code on the `uncovered lines`.\n"
+        "- **Maintain Existing Tests:** Do not remove or break existing, valid "
+        "tests in the file.\n"
+        "- **Complete File:** Your response must be the **full, complete content** "
+        "of the updated test file.\n"
+        "- **Code Only:** Do not include any explanations, comments, or markdown "
+        "formatting in your response. It must be only valid Python code."
     )
     user_msg: str = f"""
-File: {file_name}
-Uncovered lines: {coverage_lines}
+File to be tested: {file_name}
+Uncovered lines to be covered: {coverage_lines}
 
 ### Source Code ###
 {source_code}
 
-### Current Tests ###
+### Current Test File Content ###
 {test_code}
+
+### Other Tests for Style Reference ###
+{other_tests_content}
 """
+
     logger.debug(f"User message for LLM: {user_msg}")
     try:
         rsp = await client.chat.completions.create(

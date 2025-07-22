@@ -8,7 +8,12 @@ from typing import Any, Optional  # noqa: F401
 import typer
 
 from ai_unit_test.coverage_helper import collect_missing_lines
-from ai_unit_test.file_helper import find_test_file, read_file_content, write_file_content
+from ai_unit_test.file_helper import (
+    extract_function_source,
+    find_test_file,
+    read_file_content,
+    write_file_content,
+)
 from ai_unit_test.llm import update_test_with_llm
 
 logger = logging.getLogger(__name__)
@@ -59,26 +64,12 @@ def extract_from_pyproject(
     return folders, tests_folder, coverage_path
 
 
-DEFAULT_FOLDERS_OPTION = typer.Option(None, "--folders", help="Source code folders to analyze.")
-DEFAULT_TESTS_FOLDER_OPTION = typer.Option(None, "--tests-folder", help="Folder where the tests are located.")
-DEFAULT_COVERAGE_FILE_OPTION = typer.Option(".coverage", "--coverage-file", help=".coverage file.")
-DEFAULT_AUTO_OPTION = typer.Option(False, "--auto", help="Try to discover folders/tests from pyproject.toml.")
-
-
-async def _main(  # noqa: C901
-    folders: list[str] | None = DEFAULT_FOLDERS_OPTION,
-    tests_folder: str | None = DEFAULT_TESTS_FOLDER_OPTION,
-    coverage_file: str = DEFAULT_COVERAGE_FILE_OPTION,
-    auto: bool = DEFAULT_AUTO_OPTION,
-) -> None:
-    logger.info("Starting AI Unit Test generation process.")
-    logger.debug(
-        f"Initial parameters: folders={folders}, "
-        f"tests_folder={tests_folder}, "
-        f"coverage_file={coverage_file}, "
-        f"auto={auto}"
-    )
-
+def _resolve_paths_from_config(
+    folders: list[str] | None,
+    tests_folder: str | None,
+    coverage_file: str,
+    auto: bool,
+) -> tuple[list[str], str, str]:
     if auto or not (folders and tests_folder):
         logger.info("Auto-discovery enabled or folders/tests_folder not provided. Loading from pyproject.toml.")
         cfg: dict[str, Any] = load_pyproject_config()
@@ -104,6 +95,56 @@ async def _main(  # noqa: C901
         logger.error("Tests folder not defined (--tests-folder) and not found in pyproject.toml.")
         sys.exit(1)
 
+    return folders, tests_folder, coverage_file
+
+
+async def _process_missing_info(missing_info: dict[Path, list[int]], tests_folder: str) -> None:
+    for source_file_path, uncovered_lines_list in missing_info.items():
+        logger.info(f"Processing source file: {source_file_path}")
+        test_file: Path | None = find_test_file(str(source_file_path), tests_folder)
+        if not test_file:
+            logger.warning(f"Test file not found for {source_file_path}, skipping.")
+            continue
+
+        source_code: str | None = read_file_content(source_file_path)
+        test_code: str = read_file_content(test_file) or ""
+        if source_code is None:
+            logger.warning(f"Could not read source file {source_file_path}, skipping.")
+            continue
+
+        # Read all other test files for context
+        other_tests_content = ""
+        for other_test_file in Path(tests_folder).rglob("test_*.py"):
+            if other_test_file != test_file:
+                other_tests_content += read_file_content(other_test_file) + "\n\n"
+
+        logger.info(f"Updating {test_file} for uncovered lines: {uncovered_lines_list}")
+        try:
+            updated_test: str = await update_test_with_llm(
+                source_code, test_code, str(source_file_path), uncovered_lines_list, other_tests_content
+            )
+            write_file_content(test_file, updated_test)
+            logger.info(f"✅ Test file updated successfully: {test_file}")
+        except Exception as exc:  # pragma: no cover
+            logger.error(f"Error updating {test_file}: {exc}")
+
+
+async def _main(
+    folders: list[str] | None = None,
+    tests_folder: str | None = None,
+    coverage_file: str = ".coverage",
+    auto: bool = False,
+) -> None:
+    logger.info("Starting AI Unit Test generation process.")
+    logger.debug(
+        f"Initial parameters: folders={folders}, "
+        f"tests_folder={tests_folder}, "
+        f"coverage_file={coverage_file}, "
+        f"auto={auto}"
+    )
+
+    folders, tests_folder, coverage_file = _resolve_paths_from_config(folders, tests_folder, coverage_file, auto)
+
     logger.info(f"Using source folders: {folders}")
     logger.info(f"Using tests folder: {tests_folder}")
     logger.info(f"Using coverage file: {coverage_file}")
@@ -118,28 +159,69 @@ async def _main(  # noqa: C901
         return
     logger.info(f"👉 Found {len(missing_info)} files with missing coverage.")
 
-    for source_file_path, uncovered_lines_list in missing_info.items():
-        logger.info(f"Processing source file: {source_file_path}")
-        test_file: Path | None = find_test_file(source_file_path, tests_folder)
-        if not test_file:
-            logger.warning(f"Test file not found for {source_file_path}, skipping.")
-            continue
+    await _process_missing_info(missing_info, tests_folder)
 
-        source_code: str | None = read_file_content(source_file_path)
-        test_code: str = read_file_content(test_file) or ""
-        if source_code is None:
-            logger.warning(f"Could not read source file {source_file_path}, skipping.")
-            continue
 
-        logger.info(f"Updating {test_file} for uncovered lines: {uncovered_lines_list}")
-        try:
-            updated_test: str = await update_test_with_llm(
-                source_code, test_code, str(source_file_path), uncovered_lines_list
-            )
-            write_file_content(test_file, updated_test)
-            logger.info(f"✅ Test file updated successfully: {test_file}")
-        except Exception as exc:  # pragma: no cover
-            logger.error(f"Error updating {test_file}: {exc}")
+DEFAULT_FOLDERS_OPTION = typer.Option(None, "--folders", help="Source code folders to analyze.")
+DEFAULT_TESTS_FOLDER_OPTION = typer.Option(None, "--tests-folder", help="Folder where the tests are located.")
+DEFAULT_COVERAGE_FILE_OPTION = typer.Option(".coverage", "--coverage-file", help=".coverage file.")
+DEFAULT_AUTO_OPTION = typer.Option(False, "--auto", help="Try to discover folders/tests from pyproject.toml.")
+DEFAULT_FILE_PATH_ARGUMENT = typer.Argument(..., help="Path to the source file.")
+DEFAULT_FUNCTION_NAME_ARGUMENT = typer.Argument(..., help="Name of the function to test.")
+
+
+@app.command()
+def func(
+    file_path: str = DEFAULT_FILE_PATH_ARGUMENT,
+    function_name: str = DEFAULT_FUNCTION_NAME_ARGUMENT,
+    tests_folder: str | None = DEFAULT_TESTS_FOLDER_OPTION,
+    auto: bool = DEFAULT_AUTO_OPTION,
+) -> None:
+    """
+    Generates a test for a specific function in a file.
+    """
+    logger.info(f"Generating test for function '{function_name}' in file '{file_path}'.")
+
+    if auto or not tests_folder:
+        logger.info("Auto-discovery enabled or tests_folder not provided. Loading from pyproject.toml.")
+        cfg: dict[str, Any] = load_pyproject_config()
+        _, tests_dir_from_cfg, _ = extract_from_pyproject(cfg)
+
+        if not tests_folder:
+            tests_folder = tests_dir_from_cfg
+            logger.debug(f"Using tests folder from pyproject.toml: {tests_folder}")
+
+    if not tests_folder:
+        logger.error("Tests folder not defined (--tests-folder) and not found in pyproject.toml.")
+        sys.exit(1)
+
+    source_code = extract_function_source(file_path, function_name)
+    if not source_code:
+        logger.error(f"Function '{function_name}' not found in '{file_path}'.")
+        sys.exit(1)
+
+    test_file: Path | None = find_test_file(file_path, tests_folder)
+    if not test_file:
+        logger.warning(f"Test file not found for {file_path}, skipping.")
+        return
+
+    test_code: str = read_file_content(test_file) or ""
+
+    # Read all other test files for context
+    other_tests_content = ""
+    for other_test_file in Path(tests_folder).rglob("test_*.py"):
+        if other_test_file != test_file:
+            other_tests_content += read_file_content(other_test_file) + "\n\n"
+
+    logger.info(f"Updating {test_file} for function '{function_name}'.")
+    try:
+        updated_test: str = asyncio.run(
+            update_test_with_llm(source_code, test_code, str(file_path), [], other_tests_content)
+        )
+        write_file_content(test_file, updated_test)
+        logger.info(f"✅ Test file updated successfully: {test_file}")
+    except Exception as exc:  # pragma: no cover
+        logger.error(f"Error updating {test_file}: {exc}")
 
 
 @app.command()

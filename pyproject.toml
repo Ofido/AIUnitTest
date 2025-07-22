@@ -38,6 +38,23 @@ suppress-none-returning = true
 suppress-dummy-args = true
 allow-untyped-defs = true
 
+[tool.bandit]
+skips = ["B101"]
+exclude_dirs = [
+  ".git",
+  ".hg",
+  ".mypy_cache",
+  ".tox",
+  ".venv",
+  "_build",
+  "buck-out",
+  "build",
+  "dist",
+  "env",
+  "examples",
+  "node_modules",
+]
+
 [tool.mypy]
 python_version = "3.13"
 check_untyped_defs = true
@@ -67,6 +84,7 @@ markers = [
   "slow: marks slow tests",
   "integration: marks integration tests",
   "benchmark: marks benchmarks",
+  "asyncio: marks asyncio tests",
 ]
 
 [tool.coverage.run]

@@ -79,4 +79,4 @@ repos:
     hooks:
       - id: mypy
         args: ["--config-file", "pyproject.toml"]
-        additional_dependencies: ["typer", "openai", "coverage"]
+        additional_dependencies: ["typer", "openai", "coverage", "pytest"]

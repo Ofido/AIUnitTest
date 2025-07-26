@@ -23,7 +23,7 @@ jobs:
         id: precommit-cache
         with:
           path: ~/.cache/pre-commit/
-          key: precommit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }} 
+          key: precommit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
           restore-keys: |
             precommit-${{ runner.os }}-
 

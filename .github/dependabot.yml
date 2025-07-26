@@ -1,7 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: "pip"
-    directory: "/" 
+    directory: "/"
     schedule:
       interval: "weekly"  # frequência de update (daily/weekly/monthly)
     commit-message:
@@ -13,7 +13,7 @@ updates:
         patterns:
           - "*"  # agrupar todas as dependências em um PR
   - package-ecosystem: "github-actions"
-    directory: "/" 
+    directory: "/"
     schedule:
       interval: "weekly"
     commit-message:

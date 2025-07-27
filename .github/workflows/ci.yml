@@ -53,10 +53,16 @@ jobs:
           pytest --cov=src --cov-report=xml --cov-fail-under=80
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage.xml
+
+      - name: Get Cover
+        uses: orgoro/coverage@v3.2
+        with:
+            coverageFile: coverage.xml
+            token: ${{ secrets.GITHUB_TOKEN }}
 
   dependabot:
     name: Dependabot PR Validation
@@ -73,7 +79,7 @@ jobs:
       - name: Run tests
         run: pytest
       - name: Add label for dependencies
-        uses: dependabot/fetch-metadata@v1
+        uses: dependabot/fetch-metadata@v2
       - name: Label dependabot PR
         if: steps.fetch-metadata.outputs.dependency-type == 'direct:production'
         run: gh pr edit ${{ github.event.pull_request.html_url }} --add-label "dependencies"

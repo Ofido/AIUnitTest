@@ -2,7 +2,7 @@ name: CI Pipelines
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   setup:
@@ -16,7 +16,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-          cache: pip  # ativa cache de dependencies pip :contentReference[oaicite:1]{index=1}
+          cache: pip # ativa cache de dependencies pip :contentReference[oaicite:1]{index=1}
 
       - name: Cache pre-commit environment
         uses: actions/cache@v4
@@ -29,6 +29,9 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Install project
+        run: pip install -e .
 
       - name: Run pre-commit hooks
         run: pre-commit run --show-diff-on-failure --all-files
@@ -61,8 +64,8 @@ jobs:
       - name: Get Cover
         uses: orgoro/coverage@v3.2
         with:
-            coverageFile: coverage.xml
-            token: ${{ secrets.GITHUB_TOKEN }}
+          coverageFile: coverage.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   dependabot:
     name: Dependabot PR Validation

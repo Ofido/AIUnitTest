@@ -80,6 +80,7 @@ minversion = "6.0"
 addopts = "-ra -q --strict-markers --tb=short --cov=src --cov-report=term-missing"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+norecursedirs = ["tests/fake_project"]
 markers = [
   "slow: marks slow tests",
   "integration: marks integration tests",

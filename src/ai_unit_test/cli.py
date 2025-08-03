@@ -138,8 +138,7 @@ async def _process_missing_info(missing_info: dict[Path, list[int]], tests_folde
         # Get all logical chunks (classes and functions) from the source file
         code_chunks = get_source_code_chunks(source_file_path)
 
-        # Read all other test files for context
-        other_tests_content = find_relevant_tests(str(source_file_path), tests_folder)
+        other_tests_content = read_file_content(test_file)
 
         for chunk in code_chunks:
             chunk_uncovered_lines = []

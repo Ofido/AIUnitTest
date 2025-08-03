@@ -18,16 +18,14 @@ def find_test_file(source_file_path: str, tests_folder: str) -> Path | None:
 
 
 def find_relevant_tests(source_file_path: str, tests_folder: str) -> str:
-    """Finds relevant tests to use as context for the LLM."""
-    source_file = Path(source_file_path)
-    module_name = source_file.stem
-
-    relevant_content = ""
-    for test_file in Path(tests_folder).rglob("test_*.py"):
-        content = read_file_content(test_file)
-        if module_name in content:
-            relevant_content += content + "\n\n"
-    return relevant_content
+    """
+    Finds the most relevant test file for a given source file and returns its content.
+    The primary strategy is to find a test file with a similar name.
+    """
+    test_file_path = find_test_file(source_file_path, tests_folder)
+    if test_file_path:
+        return read_file_content(test_file_path)
+    return ""
 
 
 def read_file_content(file_path: Path | str) -> str:

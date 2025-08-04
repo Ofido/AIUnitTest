@@ -13,6 +13,7 @@ from ai_unit_test.cli import (
     extract_from_pyproject,
     load_pyproject_config,
 )
+from ai_unit_test.file_helper import Chunk
 
 
 def test_load_pyproject_config_exists() -> None:
@@ -72,13 +73,13 @@ def test_main_auto_discovery(
     mock_find_test_file.return_value = Path("tests/test_main.py")
     mock_read_file_content.return_value = "test_code"
     mock_get_source_code_chunks.return_value = [
-        {
-            "name": "main",
-            "type": "function",
-            "source_code": "def main(): pass",
-            "start_line": 1,
-            "end_line": 1,
-        }
+        Chunk(
+            name="main",
+            type="function",
+            source_code="def main(): pass",
+            start_line=1,
+            end_line=1,
+        )
     ]
     mock_update_test_with_llm.return_value = "updated_test_code"
 
@@ -116,13 +117,13 @@ def test_main_explicit_args(
     mock_find_test_file.return_value = Path("tests/test_main.py")
     mock_read_file_content.return_value = "test_code"
     mock_get_source_code_chunks.return_value = [
-        {
-            "name": "main",
-            "type": "function",
-            "source_code": "def main(): pass",
-            "start_line": 1,
-            "end_line": 1,
-        }
+        Chunk(
+            name="main",
+            type="function",
+            source_code="def main(): pass",
+            start_line=1,
+            end_line=1,
+        )
     ]
     mock_update_test_with_llm.return_value = "updated_test_code"
 
@@ -143,12 +144,10 @@ def test_main_explicit_args(
 
 
 @patch("ai_unit_test.cli.logger.error")
-@patch("sys.exit")
 @patch("ai_unit_test.cli.extract_function_source")
 def test_func_command_function_not_found(
     mock_extract_function_source: MagicMock,
     mock_logger_error: MagicMock,
-    mock_exit: MagicMock,
 ) -> None:
     """
     Tests the func command when the function is not found.
@@ -188,7 +187,6 @@ def test_extract_from_pyproject_fallback_to_tests_directory(mock_is_dir: MagicMo
     assert coverage_file == ".coverage.test"
 
 
-@patch("sys.exit")
 @patch("ai_unit_test.cli.load_pyproject_config", return_value={})
 @patch("ai_unit_test.cli.extract_from_pyproject", return_value=([], None, None))
 @patch("ai_unit_test.cli.logger")
@@ -196,20 +194,16 @@ def test_resolve_paths_from_config_no_folders_or_tests_folder(
     mock_logger: MagicMock,
     mock_extract_from_pyproject: MagicMock,
     mock_load_pyproject_config: MagicMock,
-    mock_exit: MagicMock,
 ) -> None:
     """
     Tests the _resolve_paths_from_config function when no folders or tests_folder are provided.
     """
     with pytest.raises(SystemExit) as excinfo:
-        folders, tests_folder, coverage_file = _resolve_paths_from_config(None, None, ".coverage", False)
-        assert excinfo.value.code == 1
+        _resolve_paths_from_config(None, None, ".coverage", False)
+    assert excinfo.value.code == 1
     mock_logger.error.assert_called_once_with(
         "Source code folders not defined (--folders) and not found in pyproject.toml."
     )
-    assert folders == []
-    assert tests_folder is None
-    assert coverage_file == ".coverage"
 
 
 @patch("ai_unit_test.cli.logger.error")
@@ -366,6 +360,6 @@ def test_func_command_no_tests_folder(
         ],
     )
 
-    assert result.exit_code == 1
+    assert result.exit_code == 0
     mock_logger_warning.assert_called_once_with("Test file not found for src/simple_math.py, skipping.")
     mock_exit.assert_called_once_with(0)

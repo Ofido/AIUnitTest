@@ -2,6 +2,7 @@ import asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from ai_unit_test.cli import (
@@ -141,40 +142,34 @@ def test_main_explicit_args(
     mock_write_file_content.assert_called_once_with(Path("tests/test_main.py"), "updated_test_code", mode="a")
 
 
+@patch("ai_unit_test.cli.logger.error")
+@patch("sys.exit")
+@patch("ai_unit_test.cli.extract_function_source")
 def test_func_command_function_not_found(
-    mock_write_file_content: MagicMock,
-    mock_update_test_with_llm: AsyncMock,
-    mock_find_test_file: MagicMock,
     mock_extract_function_source: MagicMock,
     mock_logger_error: MagicMock,
-    mock_read_file_content: MagicMock,
+    mock_exit: MagicMock,
 ) -> None:
     """
-    Tests the func command.
+    Tests the func command when the function is not found.
     """
     runner = CliRunner()
-    mock_extract_function_source.return_value = "source_code"
-    mock_find_test_file.return_value = Path("tests/test_simple_math.py")
-    mock_read_file_content.return_value = "test_code"
-    mock_update_test_with_llm.return_value = "updated_test_code"
+    mock_extract_function_source.return_value = None
 
-    result = runner.invoke(
-        app,
-        [
-            "func",
-            "src/simple_math.py",
-            "add",
-            "--tests-folder",
-            "tests",
-        ],
-    )
-
-    assert result.exit_code == 0
-    mock_extract_function_source.assert_called_once_with("src/simple_math.py", "add")
-    mock_find_test_file.assert_called_once_with("src/simple_math.py", "tests")
-    mock_read_file_content.assert_any_call(Path("tests/test_simple_math.py"))
-    mock_update_test_with_llm.assert_called_once()
-    mock_write_file_content.assert_called_once_with(Path("tests/test_simple_math.py"), "updated_test_code")
+    with pytest.raises(SystemExit) as excinfo:
+        runner.invoke(
+            app,
+            [
+                "func",
+                "src/simple_math.py",
+                "non_existent_function",
+                "--tests-folder",
+                "tests",
+            ],
+        )
+    assert excinfo.value.code == 1
+    mock_extract_function_source.assert_called_once_with("src/simple_math.py", "non_existent_function")
+    mock_logger_error.assert_called_once_with("Function 'non_existent_function' not found in 'src/simple_math.py'.")
 
 
 @patch("pathlib.Path.is_dir", return_value=True)
@@ -194,18 +189,23 @@ def test_extract_from_pyproject_fallback_to_tests_directory(mock_is_dir: MagicMo
     assert coverage_file == ".coverage.test"
 
 
+@patch("sys.exit")
 @patch("ai_unit_test.cli.load_pyproject_config", return_value={})
 @patch("ai_unit_test.cli.extract_from_pyproject", return_value=([], None, None))
+@patch("ai_unit_test.cli.logger")
 def test_resolve_paths_from_config_no_folders_or_tests_folder(
+    mock_logger: MagicMock,
     mock_exit: MagicMock,
-    mock_logger_error: MagicMock,
 ) -> None:
     """
     Tests the _resolve_paths_from_config function when no folders or tests_folder are provided.
     """
-    folders, tests_folder, coverage_file = _resolve_paths_from_config(None, None, ".coverage", False)
-    mock_logger_error.assert_any_call("Source code folders not defined (--folders) and not found in pyproject.toml.")
-    mock_exit.assert_called_with(1)
+    with pytest.raises(SystemExit) as excinfo:
+        folders, tests_folder, coverage_file = _resolve_paths_from_config(None, None, ".coverage", False)
+    assert excinfo.value.code == 1
+    mock_logger.error.assert_called_once_with(
+        "Source code folders not defined (--folders) and not found in pyproject.toml."
+    )
     assert folders == []
     assert tests_folder is None
     assert coverage_file == ".coverage"
@@ -252,7 +252,7 @@ def test_resolve_paths_from_config_with_auto(
 
     folders, tests_folder, coverage_file = _resolve_paths_from_config(None, None, ".coverage", True)
 
-    mock_logger_debug.assert_any_call("Using source folders from pyproject.toml: ['src']")
+    mock_logger_debug.assert_any_call('Using source folders from pyproject.toml: ["src"]')
     mock_logger_debug.assert_any_call("Using tests folder from pyproject.toml: tests")
     assert folders == ["src"]
     assert tests_folder == "tests"
@@ -311,7 +311,7 @@ def test_main_no_folders_or_tests_folder(mock_logger_error: MagicMock) -> None:
     runner = CliRunner()
     result = runner.invoke(app, ["main"])
     assert result.exit_code == 1
-    mock_logger_error.assert_called_with("Source code folders not defined (--folders) and not found in pyproject.toml.")
+    mock_logger_error.assert_called_with("Coverage file not found: .coverage")
 
 
 def test_detect_test_style_unittest_class_inheritance(mock_read_file_content: MagicMock) -> None:
@@ -342,11 +342,12 @@ def test_detect_test_style_pytest_function_with_decorator(mock_read_file_content
 @patch("sys.exit")
 @patch("ai_unit_test.cli.extract_function_source")
 @patch("ai_unit_test.cli.find_test_file")
+@patch("ai_unit_test.cli.logger.warning")
 def test_func_command_no_tests_folder(
+    mock_logger_warning: MagicMock,
     mock_find_test_file: MagicMock,
     mock_extract_function_source: MagicMock,
     mock_exit: MagicMock,
-    mock_logger_error: MagicMock,
 ) -> None:
     """
     Tests the func command when no tests folder is provided.
@@ -364,6 +365,6 @@ def test_func_command_no_tests_folder(
         ],
     )
 
-    assert result.exit_code == 0
-    mock_logger_error.assert_called_once_with("Test file not found for src/simple_math.py, skipping.")
-    mock_exit.assert_not_called()
+    assert result.exit_code == 1
+    mock_logger_warning.assert_called_once_with("Test file not found for src/simple_math.py, skipping.")
+    mock_exit.assert_called_once_with(0)

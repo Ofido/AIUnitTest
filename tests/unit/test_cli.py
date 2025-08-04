@@ -156,18 +156,17 @@ def test_func_command_function_not_found(
     runner = CliRunner()
     mock_extract_function_source.return_value = None
 
-    with pytest.raises(SystemExit) as excinfo:
-        runner.invoke(
-            app,
-            [
-                "func",
-                "src/simple_math.py",
-                "non_existent_function",
-                "--tests-folder",
-                "tests",
-            ],
-        )
-    assert excinfo.value.code == 1
+    result = runner.invoke(
+        app,
+        [
+            "func",
+            "src/simple_math.py",
+            "non_existent_function",
+            "--tests-folder",
+            "tests",
+        ],
+    )
+    assert result.exit_code == 1
     mock_extract_function_source.assert_called_once_with("src/simple_math.py", "non_existent_function")
     mock_logger_error.assert_called_once_with("Function 'non_existent_function' not found in 'src/simple_math.py'.")
 
@@ -195,6 +194,8 @@ def test_extract_from_pyproject_fallback_to_tests_directory(mock_is_dir: MagicMo
 @patch("ai_unit_test.cli.logger")
 def test_resolve_paths_from_config_no_folders_or_tests_folder(
     mock_logger: MagicMock,
+    mock_extract_from_pyproject: MagicMock,
+    mock_load_pyproject_config: MagicMock,
     mock_exit: MagicMock,
 ) -> None:
     """
@@ -202,7 +203,7 @@ def test_resolve_paths_from_config_no_folders_or_tests_folder(
     """
     with pytest.raises(SystemExit) as excinfo:
         folders, tests_folder, coverage_file = _resolve_paths_from_config(None, None, ".coverage", False)
-    assert excinfo.value.code == 1
+        assert excinfo.value.code == 1
     mock_logger.error.assert_called_once_with(
         "Source code folders not defined (--folders) and not found in pyproject.toml."
     )
@@ -252,7 +253,7 @@ def test_resolve_paths_from_config_with_auto(
 
     folders, tests_folder, coverage_file = _resolve_paths_from_config(None, None, ".coverage", True)
 
-    mock_logger_debug.assert_any_call('Using source folders from pyproject.toml: ["src"]')
+    mock_logger_debug.assert_any_call("Using source folders from pyproject.toml: ['src']")
     mock_logger_debug.assert_any_call("Using tests folder from pyproject.toml: tests")
     assert folders == ["src"]
     assert tests_folder == "tests"

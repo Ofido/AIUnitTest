@@ -273,7 +273,7 @@ def main(
 ) -> None:
     """
     Automatically updates unit tests using the .coverage file and
-    the settings declared in pyproject.toml.
+    the settings declared in pyproject.toml
     """
     logger.debug("CLI 'main' command invoked.")
     asyncio.run(

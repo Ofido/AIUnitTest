@@ -1,0 +1,53 @@
+name: Create Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Para criar a tag e o release
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Necessário para obter todas as tags
+
+      - name: Get latest version and calculate next
+        id: get_next_version
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+
+          # Remove 'v' prefix and split into parts
+          VERSION_PARTS=$(echo $LATEST_TAG | sed 's/^v//' | tr '.' '\n')
+          MAJOR=$(echo $VERSION_PARTS | awk '{print $1}')
+          MINOR=$(echo $VERSION_PARTS | awk '{print $2}')
+          PATCH=$(echo $VERSION_PARTS | awk '{print $3}')
+
+          # Increment patch version
+          NEXT_PATCH=$((PATCH + 1))
+          NEXT_VERSION="v${MAJOR}.${MINOR}.${NEXT_PATCH}"
+          echo "Next version: $NEXT_VERSION"
+
+          echo "NEXT_VERSION=$NEXT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create new tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a ${{ steps.get_next_version.outputs.NEXT_VERSION }} -m "Release ${{ steps.get_next_version.outputs.NEXT_VERSION }}"
+          git push origin ${{ steps.get_next_version.outputs.NEXT_VERSION }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_next_version.outputs.NEXT_VERSION }}
+          name: Release ${{ steps.get_next_version.outputs.NEXT_VERSION }}
+          body: Automated release created on push to main.
+          draft: false
+          prerelease: false

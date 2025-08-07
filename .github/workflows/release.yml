@@ -1,9 +1,8 @@
 name: Release
 
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [published]
 
 jobs:
   release:
@@ -31,17 +30,14 @@ jobs:
       - name: Build package
         run: python -m build
 
-      - name: Get version from setuptools_scm
-        id: get_version
-        run: echo "VERSION=$(python -c \"from setuptools_scm import get_version; print(get_version())\")" >> $GITHUB_OUTPUT
+
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: ${{ steps.get_version.outputs.VERSION }}
-          name: Release ${{ steps.get_version.outputs.VERSION }}
-          body: Automated release based on version from setuptools_scm.
+          tag_name: ${{ github.event.release.tag_name }}
+          name: Release ${{ github.event.release.tag_name }}
+          body: Automated release based on GitHub release event.
           draft: false
           prerelease: false
           files: dist/*

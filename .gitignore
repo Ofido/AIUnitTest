@@ -207,3 +207,4 @@ marimo/_lsp/
 __marimo__/
 tasks.md
 .vscode/settings.json
+src/ai_unit_test/_version.py

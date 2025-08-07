@@ -1,0 +1,36 @@
+package:
+  name: auto-test-updater
+  version: "{{ environ['GIT_TAG'] | replace('v', '') }}"
+
+source:
+  path: ../
+
+build:
+  noarch: python
+  script: python -m pip install . -vv
+  entry_points:
+    - ai-unit-test = ai_unit_test.cli:app
+
+requirements:
+  host:
+    - python >=3.10
+    - pip
+    - setuptools
+    - setuptools_scm
+  run:
+    - python >=3.10
+    - openai
+    - coverage
+    - typer
+
+test:
+  imports:
+    - ai_unit_test
+  commands:
+    - ai-unit-test --help
+
+about:
+  home: https://github.com/ofido/AIUnitTest
+  summary: CLI to generate and update Python unit tests automatically using coverage and AI
+  license: Apache-2.0
+  license_file: ../LICENSE

@@ -17,7 +17,7 @@ repos:
         args: ["--maxkb=500"] # por ex. limites de 500 KB
 
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v4.0.0
+    rev: v4.2.0
     hooks:
       - id: conventional-pre-commit
         stages:
@@ -35,18 +35,18 @@ repos:
         args: ["--config", "pyproject.toml"]
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.19.1
+    rev: v3.20.0
     hooks:
       - id: pyupgrade
         args: ["--py3-plus", "--py313-plus"]
 
   - repo: https://github.com/jackdewinter/pymarkdown
-    rev: v0.9.29
+    rev: v0.9.31
     hooks:
       - id: pymarkdown
         args:
           - --config
-          - pyproject.toml
+          - .markdownlint.yml
           - scan
           - docs
 
@@ -58,14 +58,14 @@ repos:
           - black==25.1.0
 
   - repo: https://github.com/pycqa/flake8
-    rev: 7.2.0
+    rev: 7.3.0
     hooks:
       - id: flake8
         additional_dependencies: [flake8-bugbear, flake8-annotations]
         args: ["--config", ".flake8"]
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.8.3
+    rev: 1.8.6
     hooks:
       - id: bandit
         args: ["-c", "pyproject.toml"]
@@ -74,7 +74,7 @@ repos:
           - "pre-commit"
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
+    rev: v1.17.1
     hooks:
       - id: mypy
         args: ["--config-file", "pyproject.toml"]

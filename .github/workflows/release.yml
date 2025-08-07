@@ -42,8 +42,6 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Set up Conda
         uses: conda-incubator/setup-miniconda@v3

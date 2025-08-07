@@ -12,4 +12,5 @@ flake8-bugbear
 flake8-annotations
 pytest
 pytest-cov
+pytest-asyncio
 pre-commit

@@ -4,7 +4,7 @@ import logging
 import sys
 import tomllib
 from pathlib import Path
-from typing import Any, Optional  # noqa: F401
+from typing import Any
 
 import typer
 
@@ -138,25 +138,24 @@ async def _process_missing_info(missing_info: dict[Path, list[int]], tests_folde
         # Get all logical chunks (classes and functions) from the source file
         code_chunks = get_source_code_chunks(source_file_path)
 
-        # Read all other test files for context
-        other_tests_content = find_relevant_tests(str(source_file_path), tests_folder)
+        other_tests_content = read_file_content(test_file)
 
         for chunk in code_chunks:
             chunk_uncovered_lines = []
             for line_num in uncovered_lines_list:
-                if chunk["start_line"] <= line_num <= chunk["end_line"]:
+                if chunk.start_line <= line_num <= chunk.end_line:
                     chunk_uncovered_lines.append(line_num)
 
             if not chunk_uncovered_lines:
                 continue  # No uncovered lines in this chunk, skip
 
             logger.info(
-                f"Updating {test_file} for chunk '{chunk['name']}' "
-                f"(lines {chunk['start_line']}-{chunk['end_line']}) with uncovered lines: {chunk_uncovered_lines}"
+                f"Updating {test_file} for chunk '{chunk.name}' "
+                f"(lines {chunk.start_line}-{chunk.end_line}) with uncovered lines: {chunk_uncovered_lines}"
             )
             try:
                 updated_test: str = await update_test_with_llm(
-                    chunk["source_code"],  # Pass chunk source code
+                    chunk.source_code,  # Pass chunk source code
                     read_file_content(test_file) or "",  # Still pass the whole test file for context
                     str(source_file_path),
                     chunk_uncovered_lines,  # Pass chunk-specific uncovered lines
@@ -274,7 +273,7 @@ def main(
 ) -> None:
     """
     Automatically updates unit tests using the .coverage file and
-    the settings declared in pyproject.toml.
+    the settings declared in pyproject.toml
     """
     logger.debug("CLI 'main' command invoked.")
     asyncio.run(

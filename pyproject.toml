@@ -67,6 +67,7 @@ allow_untyped_globals = false
 follow_imports_for_stubs = true
 disallow_untyped_defs = true
 strict = true
+exclude = ["env"]
 
 [tool.pymarkdown]
 plugins.md013.enabled = true
@@ -77,6 +78,7 @@ extensions.front-matter.enabled = true
 
 [tool.pytest.ini_options]
 minversion = "6.0"
+asyncio_mode = "auto"
 addopts = "-ra -q --strict-markers --tb=short --cov=src --cov-report=term-missing"
 testpaths = ["tests"]
 python_files = ["test_*.py"]

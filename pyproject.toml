@@ -1,12 +1,29 @@
 [project]
 name = "auto-test-updater"
-version = "0.1.0"
+dynamic = ["version"]
 description = "CLI to generate and update Python unit tests automatically using coverage and AI"
 authors = [{ name = "Ofido" }]
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 keywords = ["testing", "coverage", "openai", "automation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ofido/AIUnitTest"
+"Bug Tracker" = "https://github.com/ofido/AIUnitTest/issues"
+
 
 [tool.black]
 line-length = 120
@@ -106,3 +123,6 @@ build-backend = "setuptools.build_meta"
 
 [project.scripts]
 ai-unit-test = "ai_unit_test.cli:app"
+
+[tool.setuptools.dynamic]
+version = {attr = "ai_unit_test.__version__"}

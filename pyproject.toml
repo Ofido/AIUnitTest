@@ -1,16 +1,48 @@
 [project]
-name = "auto-test-updater"
-version = "0.1.0"
+name = "AIUnitTest"
+dynamic = ["version"]
 description = "CLI to generate and update Python unit tests automatically using coverage and AI"
 authors = [{ name = "Ofido" }]
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Apache-2.0" }
 keywords = ["testing", "coverage", "openai", "automation"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Testing",
+  "Topic :: Utilities",
+]
+license-files = ["LICENSE"]
+dependencies = ["openai", "coverage", "typer", "tomli"]
+
+[project.urls]
+"Homepage" = "https://github.com/ofido/AIUnitTest"
+"Bug Tracker" = "https://github.com/ofido/AIUnitTest/issues"
+
+[project.optional-dependencies]
+dev = [
+  "black",
+  "isort",
+  "flake8",
+  "flake8-bugbear",
+  "flake8-annotations",
+  "mypy",
+  "pymarkdown",
+  "pre-commit",
+  "pytest",
+  "pytest-cov",
+  "pytest-asyncio",
+]
 
 [tool.black]
 line-length = 120
 target-version = ["py313"]
+exclude = "src/ai_unit_test/_version.py"
 
 [tool.isort]
 profile = "black"
@@ -31,7 +63,7 @@ known_third_party = [
 known_first_party = ["ai_unit_test"]
 
 default_section = "THIRDPARTY"
-skip = ["build", "dist", ".venv", "env"]
+skip = ["build", "dist", ".venv", "env", "src/ai_unit_test/_version.py"]
 
 [tool.flake8-annotations]
 suppress-none-returning = true
@@ -67,14 +99,7 @@ allow_untyped_globals = false
 follow_imports_for_stubs = true
 disallow_untyped_defs = true
 strict = true
-exclude = ["env"]
-
-[tool.pymarkdown]
-plugins.md013.enabled = true
-plugins.md013.line_length = 120
-plugins.md013.heading_line_length = 120
-plugins.md013.code_block_line_length = 120
-extensions.front-matter.enabled = true
+exclude = ["env", "src/ai_unit_test/_version.py"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -93,7 +118,7 @@ markers = [
 [tool.coverage.run]
 branch = true
 source = ["src"]
-omit = ["tests/*", "main.py"]
+omit = ["tests/*", "main.py", "src/ai_unit_test/_version.py"]
 
 [tool.coverage.report]
 show_missing = true
@@ -101,8 +126,11 @@ skip_covered = true
 fail_under = 80
 
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=61.0", "wheel", "setuptools_scm"]
 build-backend = "setuptools.build_meta"
 
-[project.scripts]
-ai-unit-test = "ai_unit_test.cli:app"
+[tool.setuptools_scm]
+write_to = "src/ai_unit_test/_version.py"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -10,28 +10,108 @@
 [![Testing: pytest](https://img.shields.io/badge/testing-pytest-blue.svg)](https://pytest.org)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://coverage.readthedocs.io/)
 
-AIUnitTest is a command-line tool that reads your `pyproject.toml` and
-test coverage data (`.coverage`) to generate and update missing Python
-unit tests using AI.
+AIUnitTest is a command-line tool that reads your `pyproject.toml` and test coverage
+data (`.coverage`) to generate and update missing Python unit tests using AI.
+
+## How it Works
+
+1. **Coverage Analysis**: The tool uses `coverage.py` to identify lines of code
+    that are not covered by your existing test suite.
+2. **Source Code Chunking**: It breaks down the source code into logical chunks
+    (functions and classes).
+3. **AI-Powered Test Generation**: For each chunk with uncovered lines,
+    it sends the source code and the uncovered line numbers to an AI model
+    (like OpenAI's GPT) to generate new test cases.
+4. **Test File Updates**: The newly generated tests are appended to the
+    corresponding test file.
 
 ## Features
 
-- **Coverage Analysis**: Uses Coverage.py API to identify untested lines.
+- **Coverage Analysis**: Uses the Coverage.py API to identify untested lines.
 - **AI-Powered Test Generation**: Calls OpenAI GPT to create or enhance test cases.
-- **Config-Driven**: Automatically picks up `coverage.run.source` and `pytest.ini_options.testpaths` from `pyproject.toml`.
-- **Auto Mode**: `--auto` flag sets source and tests directories without manual arguments.
+- **Config-Driven**: Automatically picks up `coverage.run.source` and
+  `pytest.ini_options.testpaths` from `pyproject.toml`.
+- **Auto Mode**: The `--auto` flag sets source and tests directories without
+  manual arguments.
 - **Async & Parallel**: Speeds up OpenAI requests for large codebases.
 
-## How to Run
+## Installation
 
-1. **Install the project:**
+There are two ways to install AIUnitTest:
 
-   ```bash
-   pip install .
-   ```
+### From PyPI
 
-2. **Run the script:**
+You can install the latest stable version from PyPI:
 
-   ```bash
-   ai-unit-test --auto
-   ```
+```bash
+pip install AIUnitTest
+```
+
+### From GitHub (for the latest development version)
+
+1. **Clone the repository:**
+
+    ```bash
+    git clone https://github.com/ofido/AIUnitTest.git
+    cd AIUnitTest
+    ```
+
+2. **Install the project in editable mode:**
+
+    ```bash
+    pip install -e .
+    ```
+
+## Usage
+
+### Automatic Mode
+
+The easiest way to run the tool is in automatic mode.
+It will automatically discover your source and test folders
+from your `pyproject.toml` file.
+
+```bash
+ai-unit-test --auto
+```
+
+### Manual Mode
+
+You can also specify the source and test folders manually:
+
+```bash
+ai-unit-test --folders src --tests-folder tests
+```
+
+### Generating a Test for a Specific Function
+
+You can also generate a test for a single function:
+
+```bash
+ai-unit-test func my_module/my_file.py my_function
+```
+
+### Command-Line Options
+
+- `--folders`: The source code folders to analyze.
+- `--tests-folder`: The folder where the tests are located.
+- `--coverage-file`: The path to the `.coverage` file.
+- `--auto`: Try to discover folders/tests from `pyproject.toml`.
+
+## Configuration
+
+AIUnitTest uses the standard `pyproject.toml` file for configuration.
+Here are the relevant sections:
+
+- **`[tool.coverage.run]`**:
+  - `source`: A list of source code folders.
+- **`[tool.pytest.ini_options]`**:
+  - `testpaths`: A list of test folders.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a pull request or open an issue.
+
+## License
+
+This project is licensed under the MIT License
+see the [LICENSE](LICENSE) file for details.

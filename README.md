@@ -9,6 +9,10 @@
 [![Static typing: mypy](https://img.shields.io/badge/static%20typing-mypy-blue.svg)](https://mypy-lang.org/)
 [![Testing: pytest](https://img.shields.io/badge/testing-pytest-blue.svg)](https://pytest.org)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://coverage.readthedocs.io/)
+[![CI/CD](https://github.com/ofido/AIUnitTest/actions/workflows/ci.yml/badge.svg)](https://github.com/ofido/AIUnitTest/actions/workflows/ci.yml)
+[![GitHub last commit](https://img.shields.io/github/last-commit/ofido/AIUnitTest)](https://github.com/ofido/AIUnitTest/commits/main)
+[![GitHub repo size](https://img.shields.io/github/repo-size/ofido/AIUnitTest)](https://github.com/ofido/AIUnitTest)
+[![GitHub issues](https://img.shields.io/github/issues/ofido/AIUnitTest)](https://github.com/ofido/AIUnitTest/issues)
 
 AIUnitTest is a command-line tool that reads your `pyproject.toml` and test coverage
 data (`.coverage`) to generate and update missing Python unit tests using AI.

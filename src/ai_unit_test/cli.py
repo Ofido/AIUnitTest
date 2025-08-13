@@ -14,6 +14,7 @@ from ai_unit_test.file_helper import (
     find_relevant_tests,
     find_test_file,
     get_source_code_chunks,
+    insert_new_test,
     read_file_content,
     write_file_content,
 )
@@ -154,15 +155,17 @@ async def _process_missing_info(missing_info: dict[Path, list[int]], tests_folde
                 f"(lines {chunk.start_line}-{chunk.end_line}) with uncovered lines: {chunk_uncovered_lines}"
             )
             try:
+                existing_content = read_file_content(test_file)
                 updated_test: str = await update_test_with_llm(
                     chunk.source_code,  # Pass chunk source code
-                    read_file_content(test_file) or "",  # Still pass the whole test file for context
+                    existing_content or "",  # Still pass the whole test file for context
                     str(source_file_path),
                     chunk_uncovered_lines,  # Pass chunk-specific uncovered lines
                     other_tests_content,
                     test_style,  # Pass the detected test style
                 )
-                write_file_content(test_file, updated_test, mode="a")  # Append the new test content
+                new_content = insert_new_test(existing_content, updated_test)
+                write_file_content(test_file, new_content)  # Overwrite the file with the new content
                 logger.info(f"✅ Test file updated successfully: {test_file}")
             except Exception as exc:  # pragma: no cover
                 logger.error(f"Error updating {test_file}: {exc}")
@@ -244,8 +247,6 @@ def func(
         logger.warning(f"Test file not found for {file_path}, skipping.")
         return
 
-    test_code: str = read_file_content(test_file) or ""
-
     # Detect test style
     test_style = _detect_test_style(test_file)
     logger.debug(f"Detected test style for {test_file}: {test_style}")
@@ -255,10 +256,12 @@ def func(
 
     logger.info(f"Updating {test_file} for function '{function_name}'.")
     try:
+        existing_content = read_file_content(test_file)
         updated_test: str = asyncio.run(
-            update_test_with_llm(source_code, test_code, str(file_path), [], other_tests_content, test_style)
+            update_test_with_llm(source_code, existing_content, str(file_path), [], other_tests_content, test_style)
         )
-        write_file_content(test_file, updated_test)
+        new_content = insert_new_test(existing_content, updated_test)
+        write_file_content(test_file, new_content)
         logger.info(f"✅ Test file updated successfully: {test_file}")
     except Exception as exc:  # pragma: no cover
         logger.error(f"Error updating {test_file}: {exc}")

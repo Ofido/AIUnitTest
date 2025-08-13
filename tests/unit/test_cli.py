@@ -90,7 +90,8 @@ def test_main_auto_discovery(
     mock_find_test_file.assert_called_once_with(str(Path("src/main.py")), "tests")
     mock_read_file_content.assert_any_call(Path("tests/test_main.py"))
     mock_update_test_with_llm.assert_called_once()
-    mock_write_file_content.assert_called_once_with(Path("tests/test_main.py"), "updated_test_code", mode="a")
+    assert mock_write_file_content.call_args[0][0] == Path("tests/test_main.py")
+    assert "updated_test_code" in mock_write_file_content.call_args[0][1]
 
 
 @patch("ai_unit_test.cli.write_file_content")
@@ -140,7 +141,8 @@ def test_main_explicit_args(
     mock_find_test_file.assert_called_once_with(str(Path("src/main.py")), "tests")
     mock_read_file_content.assert_any_call(Path("tests/test_main.py"))
     mock_update_test_with_llm.assert_called_once()
-    mock_write_file_content.assert_called_once_with(Path("tests/test_main.py"), "updated_test_code", mode="a")
+    assert mock_write_file_content.call_args[0][0] == Path("tests/test_main.py")
+    assert "updated_test_code" in mock_write_file_content.call_args[0][1]
 
 
 @patch("ai_unit_test.cli.logger.error")

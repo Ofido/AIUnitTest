@@ -99,3 +99,5 @@ jobs:
       - name: Label dependabot PR
         if: steps.fetch-metadata.outputs.dependency-type == 'direct:production'
         run: gh pr edit ${{ github.event.pull_request.html_url }} --add-label "dependencies"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

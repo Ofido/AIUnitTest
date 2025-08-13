@@ -44,7 +44,7 @@ jobs:
           git push origin ${{ steps.get_next_version.outputs.NEXT_VERSION }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.get_next_version.outputs.NEXT_VERSION }}
           name: Release ${{ steps.get_next_version.outputs.NEXT_VERSION }}

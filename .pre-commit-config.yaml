@@ -72,5 +72,9 @@ repos:
     rev: v1.17.1
     hooks:
       - id: mypy
-        args: ["--config-file", "pyproject.toml"]
+        entry: mypy --config-file pyproject.toml
+        language: python
+        require_serial: true
         additional_dependencies: ["typer", "openai", "coverage", "pytest"]
+        env:
+          PYTHONPATH: src

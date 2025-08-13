@@ -44,14 +44,6 @@ jobs:
           git tag -a ${{ steps.get_next_version.outputs.NEXT_VERSION }} -m "Release ${{ steps.get_next_version.outputs.NEXT_VERSION }}"
           git push origin ${{ steps.get_next_version.outputs.NEXT_VERSION }}
 
-      - name: Create GitHub Release
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ steps.get_next_version.outputs.NEXT_VERSION }}
-          name: Release ${{ steps.get_next_version.outputs.NEXT_VERSION }}
-          generateReleaseNotes: true
-          artifacts: "dist/*"
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -64,6 +56,14 @@ jobs:
 
       - name: Build package
         run: python -m build
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.get_next_version.outputs.NEXT_VERSION }}
+          name: Release ${{ steps.get_next_version.outputs.NEXT_VERSION }}
+          generateReleaseNotes: true
+          artifacts: "dist/*"
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -79,6 +79,7 @@ jobs:
         shell: bash -l {0}
         run: |
           conda install -c conda-forge conda-build anaconda-client -y
+          conda install -c conda-forge --file conda/meta.yaml --yes
           export GIT_TAG=${{ steps.get_next_version.outputs.NEXT_VERSION }}
           conda build conda --output-folder conda-dist
           anaconda login --with-token ${{ secrets.CONDA_TOKEN }}

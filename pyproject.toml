@@ -24,6 +24,9 @@ dependencies = ["openai", "coverage", "typer", "tomli"]
 "Homepage" = "https://github.com/ofido/AIUnitTest"
 "Bug Tracker" = "https://github.com/ofido/AIUnitTest/issues"
 
+[project.scripts]
+ai-unit-test = "ai_unit_test.cli:app"
+
 [project.optional-dependencies]
 dev = [
   "black",

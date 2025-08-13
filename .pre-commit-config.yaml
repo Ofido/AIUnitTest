@@ -40,15 +40,10 @@ repos:
       - id: pyupgrade
         args: ["--py3-plus", "--py313-plus"]
 
-  - repo: https://github.com/jackdewinter/pymarkdown
-    rev: v0.9.31
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.18.1
     hooks:
-      - id: pymarkdown
-        args:
-          - --config
-          - .markdownlint.yml
-          - scan
-          - docs
+    - id: markdownlint-cli2
 
   - repo: https://github.com/adamchainz/blacken-docs
     rev: 1.19.1
@@ -77,5 +72,9 @@ repos:
     rev: v1.17.1
     hooks:
       - id: mypy
-        args: ["--config-file", "pyproject.toml"]
+        entry: mypy --config-file pyproject.toml
+        language: python
+        require_serial: true
         additional_dependencies: ["typer", "openai", "coverage", "pytest"]
+        env:
+          PYTHONPATH: src

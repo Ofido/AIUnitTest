@@ -1,0 +1,30 @@
+name: Documentation Improvement
+description: Suggest an improvement for the project's documentation.
+title: "[DOCS] - "
+labels: ["documentation", "help wanted"]
+assignees:
+  - ofido
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping us improve the documentation!
+  - type: textarea
+    id: improvement-area
+    attributes:
+      label: Which part of the documentation needs improvement?
+      description: Please be specific. If possible, include links to the relevant sections.
+    validations:
+      required: true
+  - type: textarea
+    id: suggested-improvement
+    attributes:
+      label: Describe the suggested improvement
+      description: A clear and concise description of the improvement you are proposing.
+    validations:
+      required: true
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add any other context, screenshots, or examples that might be helpful.

@@ -54,6 +54,19 @@ def write_file_content(file_path: Path, content: str, mode: str = "w") -> None:
         f.write(content)
 
 
+def insert_new_test(existing_content: str, new_test: str) -> str:
+    """
+    Inserts a new test into the existing content, before the `if __name__ == "__main__":` block if it exists.
+    """
+    main_guard = 'if __name__ == "__main__":'
+    if main_guard in existing_content:
+        parts = existing_content.split(main_guard)
+        # Ensure there's a newline before the new test and before the main guard
+        new_test = "\n\n" + new_test.strip()
+        return parts[0].rstrip() + new_test + "\n\n" + main_guard + parts[1]
+    return existing_content + "\n" + new_test
+
+
 def extract_function_source(file_path: str, function_name: str) -> str | None:
     """Extracts the source code of a specific function from a file."""
     try:

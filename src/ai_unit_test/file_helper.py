@@ -110,3 +110,11 @@ def get_source_code_chunks(file_path: Path) -> list[Chunk]:
     except (FileNotFoundError, SyntaxError) as e:
         logger.error(f"Error reading or parsing {file_path}: {e}")
     return chunks
+
+
+def find_all_test_files(tests_folder: str, patterns: list[str]) -> list[Path]:
+    """Finds all test files in a given directory, based on a list of glob patterns."""
+    test_files: list[Path] = []
+    for pattern in patterns:
+        test_files.extend(list(Path(tests_folder).rglob(pattern)))
+    return test_files

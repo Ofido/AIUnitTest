@@ -94,6 +94,20 @@ You can also generate a test for a single function:
 ai-unit-test func my_module/my_file.py my_function
 ```
 
+### Indexing and Searching Tests
+
+You can index your tests for semantic search:
+
+```bash
+ai-unit-test index
+```
+
+And then search for tests related to a specific query:
+
+```bash
+ai-unit-test search "my search query"
+```
+
 ### Command-Line Options
 
 - `--folders`: The source code folders to analyze.

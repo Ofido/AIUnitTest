@@ -18,7 +18,7 @@ classifiers = [
   "Topic :: Utilities",
 ]
 license-files = ["LICENSE"]
-dependencies = ["openai", "coverage", "typer", "tomli"]
+dependencies = ["openai", "coverage", "typer", "tomli", "langchain", "sentence-transformers", "faiss-cpu", "numpy"]
 
 [project.urls]
 "Homepage" = "https://github.com/ofido/AIUnitTest"
@@ -137,3 +137,6 @@ write_to = "src/ai_unit_test/_version.py"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ai-unit-test]
+test-patterns = ["test_*.py", "*_test.py"]

@@ -4,13 +4,15 @@ import logging
 import sys
 import tomllib
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import typer
 
+from ai_unit_test.chunking import chunk_test_file
 from ai_unit_test.coverage_helper import collect_missing_lines
 from ai_unit_test.file_helper import (
     extract_function_source,
+    find_all_test_files,
     find_relevant_tests,
     find_test_file,
     get_source_code_chunks,
@@ -18,7 +20,9 @@ from ai_unit_test.file_helper import (
     read_file_content,
     write_file_content,
 )
-from ai_unit_test.llm import update_test_with_llm
+from ai_unit_test.indexing import save_faiss_index
+from ai_unit_test.llm import generate_embeddings, update_test_with_llm
+from ai_unit_test.semantic_search import search as semantic_search
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +70,16 @@ def extract_from_pyproject(
     logger.debug(f"Found coverage file path: {coverage_path}")
 
     return folders, tests_folder, coverage_path
+
+
+def extract_test_patterns_from_pyproject(data: dict[str, Any]) -> list[str]:
+    """Extracts the test patterns from the pyproject.toml file."""
+    logger.debug("Extracting test patterns from pyproject.toml data.")
+    patterns = cast(
+        list[str], data.get("tool", {}).get("ai-unit-test", {}).get("test-patterns", ["test_*.py", "*_test.py"])
+    )
+    logger.debug(f"Found test patterns: {patterns}")
+    return patterns
 
 
 def _resolve_paths_from_config(
@@ -287,3 +301,79 @@ def main(
             auto=auto,
         )
     )
+
+
+@app.command()
+def index(
+    tests_folder: str | None = DEFAULT_TESTS_FOLDER_OPTION,
+    auto: bool = DEFAULT_AUTO_OPTION,
+) -> None:
+    """
+    Indexes the test files for semantic search.
+    """
+    logger.info("Starting test indexing process.")
+
+    if auto or not tests_folder:
+        logger.info("Auto-discovery enabled or tests_folder not provided. Loading from pyproject.toml.")
+        cfg: dict[str, Any] = load_pyproject_config()
+        _, tests_dir_from_cfg, _ = extract_from_pyproject(cfg)
+
+        if not tests_folder:
+            tests_folder = tests_dir_from_cfg
+            logger.debug(f"Using tests folder from pyproject.toml: {tests_folder}")
+
+    if not tests_folder:
+        logger.error("Tests folder not defined (--tests-folder) and not found in pyproject.toml.")
+        sys.exit(1)
+
+    logger.info(f"Using tests folder: {tests_folder}")
+
+    cfg = load_pyproject_config()
+    test_patterns = extract_test_patterns_from_pyproject(cfg)
+    test_files = find_all_test_files(tests_folder, test_patterns)
+
+    if not test_files:
+        logger.warning(f"No test files found in {tests_folder} with patterns {test_patterns}")
+        return
+
+    logger.info(f"Found {len(test_files)} test files to index.")
+    all_chunks = []
+    for test_file in test_files:
+        logger.info(f"  - {test_file}")
+        chunks = chunk_test_file(str(test_file))
+        logger.info(f"    - Found {len(chunks)} chunks")
+        all_chunks.extend(chunks)
+
+    if not all_chunks:
+        logger.warning("No chunks found to index.")
+        return
+
+    chunk_texts = [chunk.source_code for chunk in all_chunks]
+    embeddings = generate_embeddings(chunk_texts)
+    logger.info(f"Generated {len(embeddings)} embeddings.")
+
+    index_path = Path("data/index.faiss")
+    index_path.parent.mkdir(exist_ok=True, parents=True)
+    save_faiss_index(embeddings, str(index_path))
+    logger.info(f"Index saved to {index_path}")
+
+
+@app.command()
+def search(
+    query: str = typer.Argument(..., help="The query to search for."),
+    index_path: str = typer.Option("data/index.faiss", "--index-path", help="Path to the FAISS index."),
+    k: int = typer.Option(5, "--k", help="Number of results to return."),
+    threshold: float = typer.Option(1.0, "--threshold", help="Maximum distance threshold for results."),
+) -> None:
+    """
+    Searches the index for a given query.
+    """
+    logger.info(f"Searching for query: '{query}'")
+    results = semantic_search(query, index_path, k, threshold)
+    if not results:
+        logger.info("No results found.")
+        return
+
+    logger.info(f"Found {len(results)} results:")
+    for i, (index, distance) in enumerate(results):
+        logger.info(f"  {i+1}. Index: {index}, Distance: {distance}")

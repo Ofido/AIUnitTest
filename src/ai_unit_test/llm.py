@@ -91,3 +91,17 @@ async def update_test_with_llm(
     except Exception as e:
         logger.error(f"Error calling OpenAI API: {e}")
         raise
+
+
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+
+
+def generate_embeddings(texts: list[str]) -> list[list[float]]:
+    """Generates embeddings for a list of texts."""
+    from sentence_transformers import SentenceTransformer
+
+    logger.info(f"Generating embeddings for {len(texts)} texts.")
+    model = SentenceTransformer(EMBEDDING_MODEL)
+    embeddings = model.encode(texts)
+    logger.info("Embeddings generated successfully.")
+    return embeddings.tolist().tolist()

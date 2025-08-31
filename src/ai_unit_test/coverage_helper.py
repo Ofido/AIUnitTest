@@ -3,6 +3,7 @@ from pathlib import Path
 
 from coverage import Coverage
 
+# Tests expect the logger to be named "__main__"
 logger = logging.getLogger(__name__)
 
 

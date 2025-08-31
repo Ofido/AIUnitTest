@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ai_unit_test.chunking import chunk_test_file
+from ai_unit_test.chunking import ASTChunker, chunk_test_file
 
 
 def test_chunk_test_file() -> None:
@@ -19,7 +19,88 @@ class TestClass:
     chunks = chunk_test_file(str(dummy_test_file))
 
     assert len(chunks) == 2
-    assert chunks[0].name == "def test_addition():"
-    assert chunks[1].name == "class TestClass:"
+    assert chunks[0].name == "test_addition"
+    assert chunks[1].name == "TestClass"
 
     dummy_test_file.unlink()
+
+
+def test_chunk_file_empty_content() -> None:
+    chunker = ASTChunker()
+    result = chunker.chunk_file("non_existent_file.py")
+    assert result == []
+
+
+def test_chunk_file_syntax_error() -> None:
+    dummy_test_file = Path("dummy_syntax_error.py")
+    dummy_test_file.write_text("def test_function(:\n    pass\n")
+
+    chunker = ASTChunker()
+    result = chunker.chunk_file(str(dummy_test_file))
+    assert result == []
+
+    dummy_test_file.unlink()
+
+
+def test_create_chunk() -> None:
+    chunker = ASTChunker()
+    chunk = chunker._create_chunk(
+        name="test_function",
+        type="function",
+        source_code="def test_function(): pass",
+        start_line=1,
+        end_line=1,
+        file_path="dummy_file.py",
+    )
+    assert chunk.name == "test_function"
+    assert chunk.type == "function"
+    assert chunk.start_line == 1
+    assert chunk.end_line == 1
+    assert chunk.file_path == "dummy_file.py"
+
+
+def test_chunk_test_file_with_non_python_extension() -> None:
+    dummy_test_file = Path("dummy_test.txt")
+    dummy_test_file.write_text("This is not a Python test file.")
+
+    chunks = chunk_test_file(str(dummy_test_file))
+
+    assert len(chunks) == 0
+
+    dummy_test_file.unlink()
+
+
+def test_create_chunk_with_part_index() -> None:
+    chunker = ASTChunker()
+    chunk = chunker._create_chunk(
+        name="test_function",
+        type="function",
+        source_code="def test_function(): pass",
+        start_line=1,
+        end_line=1,
+        file_path="dummy_file.py",
+        part_index=1,
+    )
+    assert chunk.name == "test_function"
+
+
+def test_chunk_file_with_valid_python_content() -> None:
+    dummy_test_file = Path("dummy_valid.py")
+    dummy_test_file.write_text(
+        """def test_valid_function():
+    assert True
+"""
+    )
+
+    chunker = ASTChunker()
+    result = chunker.chunk_file(str(dummy_test_file))
+    assert len(result) > 0
+    assert result[0].name == "test_valid_function"
+
+    dummy_test_file.unlink()
+
+
+def test_chunk_test_file_with_invalid_file_path() -> None:
+    invalid_file_path = "invalid_path.py"
+    chunks = chunk_test_file(invalid_file_path)
+    assert chunks == []

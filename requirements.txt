@@ -1,6 +1,5 @@
 openai
 coverage
-pytest
 tomli
 typer
 black
@@ -14,3 +13,10 @@ pytest
 pytest-cov
 pytest-asyncio
 pre-commit
+faiss-cpu
+sentence-transformers
+numpy
+scikit-learn
+joblib
+joblib-stubs
+pytest-mock

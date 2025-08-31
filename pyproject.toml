@@ -18,7 +18,17 @@ classifiers = [
   "Topic :: Utilities",
 ]
 license-files = ["LICENSE"]
-dependencies = ["openai", "coverage", "typer", "tomli", "langchain", "sentence-transformers", "faiss-cpu", "numpy"]
+dependencies = [
+  "openai",
+  "coverage",
+  "typer",
+  "tomli",
+  "sentence-transformers",
+  "faiss-cpu",
+  "numpy",
+  "scikit-learn",
+  "joblib",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/ofido/AIUnitTest"
@@ -103,6 +113,10 @@ follow_imports_for_stubs = true
 disallow_untyped_defs = true
 strict = true
 exclude = ["env", "src/ai_unit_test/_version.py"]
+
+[[tool.mypy.overrides]]
+module = "faiss"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "6.0"

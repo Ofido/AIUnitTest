@@ -15,7 +15,6 @@ from ai_unit_test.file_helper import (
     find_all_test_files,
     find_relevant_tests,
     find_test_file,
-    get_source_code_chunks,
     insert_new_test,
     read_file_content,
     write_file_content,
@@ -151,7 +150,7 @@ async def _process_missing_info(missing_info: dict[Path, list[int]], tests_folde
         logger.debug(f"Detected test style for {test_file}: {test_style}")
 
         # Get all logical chunks (classes and functions) from the source file
-        code_chunks = get_source_code_chunks(source_file_path)
+        code_chunks = chunk_test_file(str(source_file_path))
 
         other_tests_content = read_file_content(test_file)
 
@@ -218,20 +217,12 @@ async def _main(
     await _process_missing_info(missing_info, tests_folder)
 
 
-DEFAULT_FOLDERS_OPTION = typer.Option(None, "--folders", help="Source code folders to analyze.")
-DEFAULT_TESTS_FOLDER_OPTION = typer.Option(None, "--tests-folder", help="Folder where the tests are located.")
-DEFAULT_COVERAGE_FILE_OPTION = typer.Option(".coverage", "--coverage-file", help=".coverage file.")
-DEFAULT_AUTO_OPTION = typer.Option(False, "--auto", help="Try to discover folders/tests from pyproject.toml.")
-DEFAULT_FILE_PATH_ARGUMENT = typer.Argument(..., help="Path to the source file.")
-DEFAULT_FUNCTION_NAME_ARGUMENT = typer.Argument(..., help="Name of the function to test.")
-
-
 @app.command()
 def func(
-    file_path: str = DEFAULT_FILE_PATH_ARGUMENT,
-    function_name: str = DEFAULT_FUNCTION_NAME_ARGUMENT,
-    tests_folder: str | None = DEFAULT_TESTS_FOLDER_OPTION,
-    auto: bool = DEFAULT_AUTO_OPTION,
+    file_path: str,
+    function_name: str,
+    tests_folder: str | None = None,
+    auto: bool = False,
 ) -> None:
     """
     Generates a test for a specific function in a file.
@@ -283,10 +274,10 @@ def func(
 
 @app.command()
 def main(
-    folders: list[str] | None = DEFAULT_FOLDERS_OPTION,
-    tests_folder: str | None = DEFAULT_TESTS_FOLDER_OPTION,
-    coverage_file: str = DEFAULT_COVERAGE_FILE_OPTION,
-    auto: bool = DEFAULT_AUTO_OPTION,
+    folders: list[str] | None = None,
+    tests_folder: str | None = None,
+    coverage_file: str = ".coverage",
+    auto: bool = False,
 ) -> None:
     """
     Automatically updates unit tests using the .coverage file and
@@ -305,8 +296,9 @@ def main(
 
 @app.command()
 def index(
-    tests_folder: str | None = DEFAULT_TESTS_FOLDER_OPTION,
-    auto: bool = DEFAULT_AUTO_OPTION,
+    tests_folder: str | None = None,
+    auto: bool = False,
+    index_dir: str = "data/faiss_index",
 ) -> None:
     """
     Indexes the test files for semantic search.
@@ -338,42 +330,58 @@ def index(
 
     logger.info(f"Found {len(test_files)} test files to index.")
     all_chunks = []
+    metadata_list = []
     for test_file in test_files:
         logger.info(f"  - {test_file}")
         chunks = chunk_test_file(str(test_file))
         logger.info(f"    - Found {len(chunks)} chunks")
         all_chunks.extend(chunks)
+        for chunk in chunks:
+            metadata_list.append(
+                {
+                    "chunk_id": f"{test_file}:{chunk.start_line}-{chunk.end_line}",
+                    "source_filepath": str(test_file),
+                    "start_line": chunk.start_line,
+                    "end_line": chunk.end_line,
+                    "content_hash": chunk.content_hash,
+                    "text_preview": chunk.source_code[:250],
+                }
+            )
 
     if not all_chunks:
         logger.warning("No chunks found to index.")
         return
 
     chunk_texts = [chunk.source_code for chunk in all_chunks]
-    embeddings = generate_embeddings(chunk_texts)
+    embeddings = generate_embeddings(chunk_texts, source_file_path=str(test_files))
     logger.info(f"Generated {len(embeddings)} embeddings.")
 
-    index_path = Path("data/index.faiss")
-    index_path.parent.mkdir(exist_ok=True, parents=True)
-    save_faiss_index(embeddings, str(index_path))
+    index_path = Path(index_dir)
+    index_path.mkdir(exist_ok=True, parents=True)
+    save_faiss_index(embeddings, metadata_list, str(index_path))
     logger.info(f"Index saved to {index_path}")
 
 
 @app.command()
 def search(
-    query: str = typer.Argument(..., help="The query to search for."),
-    index_path: str = typer.Option("data/index.faiss", "--index-path", help="Path to the FAISS index."),
-    k: int = typer.Option(5, "--k", help="Number of results to return."),
-    threshold: float = typer.Option(1.0, "--threshold", help="Maximum distance threshold for results."),
+    query: str,
+    index_dir: str = "data/faiss_index",
+    k: int = 5,
+    threshold: float = 0.7,
 ) -> None:
     """
     Searches the index for a given query.
     """
     logger.info(f"Searching for query: '{query}'")
-    results = semantic_search(query, index_path, k, threshold)
+    results = semantic_search(query, index_dir, k, threshold)
     if not results:
         logger.info("No results found.")
         return
 
     logger.info(f"Found {len(results)} results:")
-    for i, (index, distance) in enumerate(results):
-        logger.info(f"  {i+1}. Index: {index}, Distance: {distance}")
+    for i, (result_meta, distance) in enumerate(results):
+        logger.info(
+            f"  {i+1}. Similarity: {distance:.4f} | "
+            f"{result_meta['source_filepath']}:{result_meta['start_line']}-{result_meta['end_line']}"
+        )
+        logger.info(f"      Preview: {result_meta['text_preview'].strip()}")

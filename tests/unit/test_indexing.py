@@ -38,7 +38,7 @@ def test_save_faiss_index_validation_error() -> None:
         save_faiss_index([[0.1], [0.2, 0.3]], [{"a": 1}, {"b": 2}], "any_dir")
 
     with pytest.raises(ValueError, match="Not all items in the metadata list are valid"):
-        save_faiss_index([[0.1]], ["not-a-dict"], "any_dir")  # type: ignore[list-item]
+        save_faiss_index([[0.1]], ["not-a-dict"], "any_dir")
 
 
 def test_save_faiss_index_mocked(tmp_path: Path, mocker: MockerFixture) -> None:
@@ -146,7 +146,7 @@ def test_save_and_load_sklearn_index(tmp_path: Path, mocker: MockerFixture) -> N
 
 def test_faiss_availability() -> None:
     """Tests the FAISS availability flag."""
-    assert FAISS_AVAILABLE == (faiss is not MagicMock)  # pyright: ignore[reportPossiblyUnboundVariable]
+    assert FAISS_AVAILABLE == (not isinstance(faiss, MagicMock))  # pyright: ignore[reportPossiblyUnboundVariable]
 
 
 def test_save_faiss_index_valid_inputs() -> None:

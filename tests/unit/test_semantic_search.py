@@ -2,6 +2,7 @@
 Testes corrigidos para semantic_search.py - versão final
 """
 
+from builtins import isinstance as original_isinstance
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -12,8 +13,6 @@ from ai_unit_test.semantic_search import search
 
 def test_search_with_faiss_index() -> None:
     """Testa busca com índice FAISS mockado"""
-    # Salvar isinstance original
-    original_isinstance = __builtins__["isinstance"]  # type: ignore
 
     # Mock do índice FAISS
     mock_index = MagicMock()
@@ -56,11 +55,11 @@ def test_search_with_faiss_index() -> None:
         # Executar busca com threshold baixo para pegar todos os resultados
         results = search("test query", "dummy_dir", k=3, threshold=0.0)
 
-        # Verificações - função retorna lista de tuplas (metadata, score)
-        assert len(results) == 3
-        assert results[0] == ("chunk0", 0.9)  # type: ignore  # score direto do FAISS
-        assert results[1] == ("chunk1", 0.5)  # type: ignore  # score direto do FAISS
-        assert results[2] == ("chunk2", 0.1)  # type: ignore  # score direto do FAISS
+    # Checks - function returns a list of tuples (metadata, score)
+    assert len(results) == 3
+    assert results[0] == ("chunk0", 0.9)  # direct score from FAISS
+    assert results[1] == ("chunk1", 0.5)  # direct score from FAISS
+    assert results[2] == ("chunk2", 0.1)  # direct score from FAISS
 
 
 def test_search_with_sklearn_index() -> None:
@@ -93,18 +92,16 @@ def test_search_with_sklearn_index() -> None:
 
         # Verificações - sklearn converte distâncias para scores com 1 - distance
         assert len(results) == 3
-        assert results[0][0] == "chunk0"  # type: ignore
+        assert results[0][0] == "chunk0"
         assert abs(results[0][1] - 0.9) < 1e-6  # 1 - 0.1
-        assert results[1][0] == "chunk1"  # type: ignore
+        assert results[1][0] == "chunk1"
         assert abs(results[1][1] - 0.5) < 1e-6  # 1 - 0.5
-        assert results[2][0] == "chunk2"  # type: ignore
+        assert results[2][0] == "chunk2"
         assert abs(results[2][1] - 0.1) < 1e-6  # 1 - 0.9
 
 
 def test_search_with_threshold_filtering() -> None:
     """Testa filtragem por threshold"""
-    # Salvar isinstance original
-    original_isinstance = __builtins__["isinstance"]  # type: ignore
 
     # Mock do índice FAISS
     mock_index = MagicMock()
@@ -144,13 +141,11 @@ def test_search_with_threshold_filtering() -> None:
 
         # Verificações - apenas o primeiro resultado deve passar no threshold
         assert len(results) == 1
-        assert results[0] == ("chunk0", 0.9)  # type: ignore
+        assert results[0] == ("chunk0", 0.9)
 
 
 def test_search_empty_results() -> None:
     """Testa busca que retorna resultados vazios devido ao threshold"""
-    # Salvar isinstance original
-    original_isinstance = __builtins__["isinstance"]  # type: ignore
 
     # Mock do índice FAISS
     mock_index = MagicMock()
@@ -204,8 +199,6 @@ def test_search_invalid_index_dir() -> None:
 
 def test_search_dimension_mismatch() -> None:
     """Testa erro quando dimensões não batem com FAISS"""
-    # Salvar isinstance original
-    original_isinstance = __builtins__["isinstance"]  # type: ignore
 
     # Mock do índice FAISS
     mock_index = MagicMock()

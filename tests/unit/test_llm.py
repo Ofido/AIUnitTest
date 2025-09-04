@@ -23,9 +23,6 @@ def test_generate_embeddings_cache_hit() -> None:
         temp_file.write("print('hello world')")
         source_file_path = temp_file.name
 
-    # Calculate the hash from the actual file content
-    import hashlib
-
     with open(source_file_path, "rb") as f:
         file_content = f.read()
     content_hash = hashlib.sha256(file_content).hexdigest()

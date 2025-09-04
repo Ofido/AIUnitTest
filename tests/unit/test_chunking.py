@@ -1,3 +1,4 @@
+import ast
 from pathlib import Path
 
 from ai_unit_test.chunking import ASTChunker, chunk_test_file
@@ -104,3 +105,42 @@ def test_chunk_test_file_with_invalid_file_path() -> None:
     invalid_file_path = "invalid_path.py"
     chunks = chunk_test_file(invalid_file_path)
     assert chunks == []
+
+
+def test_split_large_chunk_function() -> None:
+    # Função com 10 linhas (simula uma função grande)
+    source_code = (
+        "def big_function():\n"
+        "    a = 1\n"
+        "    b = 2\n"
+        "    c = 3\n"
+        "    d = 4\n"
+        "    e = 5\n"
+        "    f = 6\n"
+        "    g = 7\n"
+        "    h = 8\n"
+        "    i = 9\n"
+    )
+    file_path = "dummy_big.py"
+    # Parse AST
+    tree = ast.parse(source_code)
+    func_node = next(n for n in tree.body if isinstance(n, ast.FunctionDef))
+
+    # Chunker com chunk pequeno para testar divisão
+    chunker = ASTChunker(max_chunk_lines=4, overlap_lines=2)
+    sub_chunks = chunker._split_large_chunk(func_node, file_path, source_code)
+
+    # Deve dividir em partes com sobreposição
+    assert len(sub_chunks) > 1
+    # Verifica se o nome está correto
+    assert sub_chunks[0].name.startswith("big_function-part")
+    # Verifica se a assinatura está presente nos sub-chunks
+    for i, chunk in enumerate(sub_chunks):
+        if i > 0:
+            assert "def big_function()" in chunk.source_code
+            assert "..." in chunk.source_code
+
+    # Verifica se as linhas estão corretas e não ultrapassam o total
+    for chunk in sub_chunks:
+        assert chunk.start_line >= func_node.lineno
+        assert chunk.end_line <= func_node.lineno + len(source_code.splitlines()) - 1

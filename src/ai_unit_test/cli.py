@@ -298,7 +298,7 @@ def main(
 def index(
     tests_folder: str | None = None,
     auto: bool = False,
-    index_dir: str = "data/faiss_index",
+    index_dir: str = ".ai_unit_test_cache/faiss_index",
 ) -> None:
     """
     Indexes the test files for semantic search.
@@ -329,13 +329,17 @@ def index(
         return
 
     logger.info(f"Found {len(test_files)} test files to index.")
-    all_chunks = []
     metadata_list = []
+    embeddings = []
     for test_file in test_files:
         logger.info(f"  - {test_file}")
         chunks = chunk_test_file(str(test_file))
-        logger.info(f"    - Found {len(chunks)} chunks")
-        all_chunks.extend(chunks)
+        logger.info(f"  - Found {len(chunks)} chunks")
+
+        if not chunks:
+            logger.warning(f"No chunks found to file {test_file}.")
+            continue
+
         for chunk in chunks:
             metadata_list.append(
                 {
@@ -348,12 +352,13 @@ def index(
                 }
             )
 
-    if not all_chunks:
-        logger.warning("No chunks found to index.")
+        chunk_texts = [chunk.source_code for chunk in chunks]
+        embeddings.extend(generate_embeddings(chunk_texts, source_file_path=str(test_file)))
+
+    if not embeddings:
+        logger.warning("No embeddings generated.")
         return
 
-    chunk_texts = [chunk.source_code for chunk in all_chunks]
-    embeddings = generate_embeddings(chunk_texts, source_file_path=str(test_files))
     logger.info(f"Generated {len(embeddings)} embeddings.")
 
     index_path = Path(index_dir)
@@ -365,7 +370,7 @@ def index(
 @app.command()
 def search(
     query: str,
-    index_dir: str = "data/faiss_index",
+    index_dir: str = ".ai_unit_test_cache/faiss_index",
     k: int = 5,
     threshold: float = 0.7,
 ) -> None:

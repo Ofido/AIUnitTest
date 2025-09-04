@@ -1,4 +1,5 @@
 import json
+import warnings
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -20,7 +21,9 @@ from ai_unit_test.indexing import (
 from ai_unit_test.llm import EMBEDDING_MODEL
 
 if FAISS_AVAILABLE:
-    import faiss
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DeprecationWarning, module="<frozen importlib._bootstrap>")
+        import faiss
 
 
 def test_save_faiss_index_validation_error() -> None:
@@ -251,7 +254,9 @@ def test_load_faiss_index_metadata_file_not_found(tmp_path: Path) -> None:
     index_dir.mkdir(exist_ok=True)
 
     # Create a valid FAISS index file
-    import faiss
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DeprecationWarning, module="<frozen importlib._bootstrap>")
+        import faiss
     import numpy as np
 
     embeddings = [np.random.rand(128).astype("float32") for _ in range(10)]
@@ -433,7 +438,9 @@ def test_load_faiss_index_invalid_index_type_faiss_with_valid_data(tmp_path: Pat
     index_dir.mkdir(exist_ok=True)
 
     # Create a valid FAISS index file
-    import faiss
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DeprecationWarning, module="<frozen importlib._bootstrap>")
+        import faiss
     import numpy as np
 
     embeddings = np.random.rand(10, 128).astype(np.float32)

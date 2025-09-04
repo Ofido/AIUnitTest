@@ -114,7 +114,7 @@ def _create_cache_filepath(source_file_path: str, model_name: str, normalize: bo
         model_name_safe = model_name.replace("/", "_")
         norm_str = "norm" if normalize else "unorm"
         cache_filename = f"{content_hash}_{model_name_safe}_{norm_str}.npz"
-        cache_dir = os.path.join(".cache", "embeddings")
+        cache_dir = os.path.join(".ai_unit_test_cache", "embeddings")
         return os.path.join(cache_dir, cache_filename)
     except OSError as e:
         logger.warning(f"Could not read source file {source_file_path} for caching. Error: {e}")

@@ -439,7 +439,7 @@ def test_search_results_found(mock_logger_info: MagicMock, mock_semantic_search:
     Tests the search function when results are found for the query.
     """
     query = "existing_query"
-    index_dir = "data/faiss_index"
+    index_dir = ".ai_unit_test_cache/faiss_index"
     k = 5
     threshold = 0.7
 
@@ -902,7 +902,7 @@ def test_search_results_found_multiple(mock_logger_info: MagicMock, mock_semanti
     Tests the search function when multiple results are found for the query.
     """
     query = "existing_query"
-    index_dir = "data/faiss_index"
+    index_dir = ".ai_unit_test_cache/faiss_index"
     k = 5
     threshold = 0.7
 

@@ -40,7 +40,7 @@ To index your existing tests for semantic search, run the following command:
 ai-unit-test index
 ```
 
-This will create a FAISS index of your tests in the `data/` directory.
+This will create a FAISS index of your tests in the `.ai_unit_test_cache/` directory.
 
 ## Searching Tests
 

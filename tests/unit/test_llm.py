@@ -15,7 +15,7 @@ def test_generate_embeddings_cache_hit() -> None:
     source_file_path = "dummy.py"
     model_name = "all-MiniLM-L6-v2"
     normalize = False
-    cache_dir = os.path.join(".cache", "embeddings")
+    cache_dir = os.path.join(".ai_unit_test_cache", "embeddings")
     os.makedirs(cache_dir, exist_ok=True)
 
     # Create a temporary source file
@@ -51,7 +51,7 @@ def test_generate_embeddings_cache_miss() -> None:
     texts = ["hello world"]
     model_name = "all-MiniLM-L6-v2"
     normalize = False
-    cache_dir = os.path.join(".cache", "embeddings")
+    cache_dir = os.path.join(".ai_unit_test_cache", "embeddings")
     os.makedirs(cache_dir, exist_ok=True)
 
     # Create a temporary source file
@@ -88,7 +88,7 @@ def test_generate_embeddings_cache_exception() -> None:
     texts = ["hello world"]
     model_name = "all-MiniLM-L6-v2"
     normalize = False
-    cache_dir = os.path.join(".cache", "embeddings")
+    cache_dir = os.path.join(".ai_unit_test_cache", "embeddings")
     os.makedirs(cache_dir, exist_ok=True)
 
     # Create a temporary source file
@@ -263,7 +263,7 @@ def test_generate_embeddings_cache_save() -> None:
     texts = ["hello world"]
     model_name = "all-MiniLM-L6-v2"
     normalize = True
-    cache_dir = os.path.join(".cache", "embeddings")
+    cache_dir = os.path.join(".ai_unit_test_cache", "embeddings")
     os.makedirs(cache_dir, exist_ok=True)
 
     # Create a temporary source file
@@ -331,7 +331,7 @@ def test_generate_embeddings_cache_save_exception() -> None:
     texts = ["hello world"]
     model_name = "all-MiniLM-L6-v2"
     normalize = True
-    cache_dir = os.path.join(".cache", "embeddings")
+    cache_dir = os.path.join(".ai_unit_test_cache", "embeddings")
     os.makedirs(cache_dir, exist_ok=True)
 
     # Create a temporary source file
@@ -436,7 +436,7 @@ def test_generate_embeddings_cache_filepath_creation() -> None:
     """Tests that generate_embeddings correctly creates the cache filepath."""
     model_name = "all-MiniLM-L6-v2"
     normalize = False
-    cache_dir = os.path.join(".cache", "embeddings")
+    cache_dir = os.path.join(".ai_unit_test_cache", "embeddings")
 
     # Create a temporary source file
     with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as temp_file:
@@ -494,7 +494,7 @@ def test_generate_embeddings_cache_miss_with_normalization() -> None:
     texts = ["hello world"]
     model_name = "all-MiniLM-L6-v2"
     normalize = True
-    cache_dir = os.path.join(".cache", "embeddings")
+    cache_dir = os.path.join(".ai_unit_test_cache", "embeddings")
     os.makedirs(cache_dir, exist_ok=True)
 
     # Create a temporary source file
@@ -556,7 +556,7 @@ async def test_update_test_with_llm_with_no_coverage_lines() -> None:
 
 
 @pytest.mark.asyncio
-async def test_update_test_with_llm_with_coverage_line_54() -> None:
+async def test_update_test_with_llm_with_coverage_line() -> None:
     """Tests that update_test_with_llm handles a specific coverage line (54) correctly."""
     source_code = "def subtract(a, b): return a - b"
     test_code = "def test_subtract(): assert subtract(5, 3) == 2"
@@ -590,7 +590,7 @@ def test_generate_embeddings_cache_miss_with_exception_handling() -> None:
     texts = ["hello world"]
     model_name = "all-MiniLM-L6-v2"
     normalize = False
-    cache_dir = os.path.join(".cache", "embeddings")
+    cache_dir = os.path.join(".ai_unit_test_cache", "embeddings")
     os.makedirs(cache_dir, exist_ok=True)
 
     # Create a temporary source file
@@ -615,7 +615,7 @@ def test_generate_embeddings_cache_miss_with_logging() -> None:
     texts = ["hello world"]
     model_name = "all-MiniLM-L6-v2"
     normalize = False
-    cache_dir = os.path.join(".cache", "embeddings")
+    cache_dir = os.path.join(".ai_unit_test_cache", "embeddings")
     os.makedirs(cache_dir, exist_ok=True)
 
     # Create a temporary source file
@@ -638,9 +638,11 @@ def test_generate_embeddings_cache_miss_with_logging() -> None:
 
 def test_generate_embeddings_cache_filepath_creation_with_special_characters() -> None:
     """Tests that generate_embeddings correctly creates the cache filepath with special characters in model name."""
+    texts = ["hello world"]
     model_name = "all-MiniLM-L6-v2/special"
     normalize = False
-    cache_dir = os.path.join(".cache", "embeddings")
+    cache_dir = os.path.join(".ai_unit_test_cache", "embeddings")
+    os.makedirs(cache_dir, exist_ok=True)
 
     # Create a temporary source file
     with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as temp_file:
@@ -656,8 +658,15 @@ def test_generate_embeddings_cache_filepath_creation_with_special_characters() -
     cache_filename = f"{content_hash}_{model_name_safe}_{norm_str}.npz"
     cache_filepath = os.path.join(cache_dir, cache_filename)
 
+    # Call generate_embeddings to ensure the cache file is created
+    mock_model = MagicMock()
+    mock_model.encode.return_value = np.array([[0.1, 0.2, 0.3]])
+    with patch("ai_unit_test.llm.SentenceTransformer", return_value=mock_model):
+        _ = generate_embeddings(texts, source_file_path, model_name, normalize)
+
     # Ensure the cache filepath is created correctly
     assert cache_filepath.endswith(f"{content_hash}_{model_name_safe}_{norm_str}.npz")
 
     # Cleanup
+    os.unlink(cache_filepath)
     os.unlink(source_file_path)

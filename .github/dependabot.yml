@@ -3,7 +3,7 @@ updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "weekly"  # frequência de update (daily/weekly/monthly)
+      interval: "weekly" # update frequency (daily/weekly/monthly)
     commit-message:
       prefix: "chore"
       include: "scope"
@@ -11,7 +11,7 @@ updates:
     groups:
       python-deps:
         patterns:
-          - "*"  # agrupar todas as dependências em um PR
+          - "*" # group all dependencies into a single PR
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

@@ -8,7 +8,7 @@ from sentence_transformers import SentenceTransformer
 from ai_unit_test.indexing import FAISS_AVAILABLE, load_faiss_index
 
 if FAISS_AVAILABLE:
-    # Suprimir warnings do SWIG/FAISS temporariamente
+    # Suppress SWIG/FAISS warnings temporarily
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=DeprecationWarning, module="<frozen importlib._bootstrap>")
         import faiss

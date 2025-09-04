@@ -1,88 +1,82 @@
 # Initial Project Documentation
 
-Esta seção descreve a ideia inicial, objetivos e visão geral arquitetural do projeto AIUnitTest.
+This section describes the initial idea, objectives, and architectural overview of the AIUnitTest project.
 
-1. Objetivo
+1. Objective
+  The Auto Test Updater aims to automate the generation and updating of unit tests in Python projects,
+  reducing manual work and continuously improving coverage.
 
-   O Auto Test Updater busca automatizar a geração e atualização de testes unitários em projetos Python,
-   reduzindo o trabalho manual e melhorando a cobertura de forma contínua.
+2. Context
+  Many teams struggle to keep test coverage high. Missing or outdated tests
+  can lead to regressions and hinder refactoring. By integrating an LLM, we can:
+    - Quickly detect untested lines.
+    - Generate test cases consistent with the project's style.
+    - Update existing tests when code logic changes.
 
-2. Contexto
-
-   Muitas equipes enfrentam desafios para manter a cobertura de testes alta. Testes faltantes ou desatualizados
-   podem levar a regressões e dificultar refatorações. Ao integrar um LLM, podemos:
-
-   - Detectar rapidamente linhas não testadas.
-   - Gerar casos de teste coerentes com o estilo do projeto.
-   - Atualizar testes existentes quando a lógica do código muda.
-
-3. Principais Componentes
-
+3. Main Components
    - CLI (cli.py)
-     - Parse de argumentos e carregamento de configurações do pyproject.toml.
-     - Modo manual vs. --auto.
+     - Argument parsing and configuration loading from pyproject.toml.
+     - Manual mode vs. --auto.
    - Coverage Helper (coverage_helper.py)
-     - Uso da API do Coverage.py para coletar linhas sem cobertura.
-     - Retorna mapeamento arquivo → linhas faltantes.
+     - Use Coverage.py API to collect uncovered lines.
+     - Returns a mapping file → missing lines.
    - File Helper (file_helper.py)
-     - Localização de módulos fonte e arquivos de teste.
-     - Leitura e escrita de arquivos.
+     - Locate source modules and test files.
+     - Read and write files.
    - LLM Integration (llm.py)
-     - Conexão assíncrona com OpenAI GPT para gerar ou completar testes.
-     - Montagem de prompts (system + user).
-   - Orquestração (main.py)
-     - Fluxo principal em asyncio: coleta cobertura, encontra testes, chama LLM e grava resultados.
-     - Logs e tratamento de erros.
+     - Asynchronous connection with OpenAI GPT to generate or complete tests.
+     - Prompt assembly (system + user).
+   - Orchestration (main.py)
+     - Main asyncio flow: collect coverage, find tests, call LLM, and write results.
+     - Logging and error handling.
 
-4. Fluxo de Execução
+4. Execution Flow
 
-   ```mermaid
-   flowchart TD
-       A[Iniciar CLI] --> B{--auto ?}
-       B -- sim --> C[Carregar config do pyproject.toml]
-       B -- não --> D[Usar args passados]
-       D --> E[Validar paths]
-       C --> E
-       E --> F[Collect Missing Lines]
-       F --> G{Arquivos faltando?}
-       G -- não --> H[Fim]
-       G -- sim --> I[Para cada arquivo]
-       I --> J[Find Test File]
-       J --> K[Read source & test]
-       K --> L[Chama LLM Async]
-       L --> M[Escreve arquivo de teste]
-       M --> I
-       M --> H
-   ```
+    ```mermaid
+      flowchart TD
+      A[Start CLI] --> B{--auto ?}
+      B -- yes --> C[Load config from pyproject.toml]
+      B -- no --> D[Use provided args]
+      D --> E[Validate paths]
+          C --> E
+          E --> F[Collect Missing Lines]
+      F --> G{Missing files?}
+      G -- no --> H[End]
+      G -- yes --> I[For each file]
+          I --> J[Find Test File]
+          J --> K[Read source & test]
+      K --> L[Call LLM Async]
+      L --> M[Write test file]
+          M --> I
+          M --> H
+    ```
 
-5. Critérios de Sucesso
+5. Success Criteria
+   - Minimum coverage of X% after execution.
+   - Generated tests pass without failures.
+   - Acceptable execution time (< Y seconds for N files).
 
-   - Cobertura mínima de X% após execução.
-   - Testes gerados passam sem falhas.
-   - Tempo de execução aceitável (< Y segundos para N arquivos).
+6. Future Roadmap
+   - Phase 1: Context Improvement via Simple Search
+     - Enrich the LLM prompt with examples of existing tests found by simple text search.
+     - This grounds the model in the project's style and conventions, improving test quality.
 
-6. Roadmap Futuro
+   - Phase 2: RAG with a Simplified Embedding Module
+     - Implement a semantic search system to find the most relevant test examples.
+     - Create a command to index existing tests, generating embeddings and saving them locally.
+     - Use embedding similarity search to find the best examples for the prompt.
+     - Support for multiple LLM providers.
+     - Automated generation of mocks and fixtures.
+     - Integration with external CI pipelines (GitHub Apps, GitLab CI).
+     - Web dashboard to visualize coverage progress.
 
-   - Fase 1: Melhoria de Contexto por Busca Simples
-     - Enriquecer o prompt do LLM com exemplos de testes existentes, encontrados por busca de texto simples.
-     - Isso aterra o modelo no estilo e nas convenções do projeto, melhorando a qualidade dos testes gerados.
-   - Fase 2: RAG com Módulo de Embedding Simplificado
-     - Implementar um sistema de busca semântica para encontrar os exemplos de testes mais relevantes.
-     - Criar um comando para indexar os testes existentes, gerando embeddings e salvando-os localmente.
-     - Utilizar a busca por similaridade de embeddings para encontrar os melhores exemplos para o prompt.
-   - Suporte a múltiplos provedores de LLM.
-   - Geração de mocks e fixtures automatizados.
-   - Integração com pipelines de CI externos (GitHub Apps, GitLab CI).
-   - Dashboard web para visualização de progressos de cobertura.
+   - Phase 3: Refactoring and Simplification of Existing Tests
+     - The LLM can analyze existing tests and suggest refactoring to improve readability and conciseness,
+       applying effective testing patterns (e.g., smart use of `pytest.fixture`, simplifying complex
+       assertions, removing duplication).
+     - Benefit: Improved maintainability of tests.
 
-   - Fase 3: Refatoração e Simplificação de Testes Existentes
-     - O LLM pode analisar testes existentes e sugerir refatorações para melhorar legibilidade, concisão e
-       aplicação de padrões de teste eficazes (ex: uso inteligente de `pytest.fixture`, simplificação de
-       asserções complexas, remoção de duplicação).
-     - Benefício: Melhoria da manutenibilidade dos testes.
-
-   - Fase 4: Geração Inteligente de Dados de Teste
-     - O LLM pode analisar a assinatura de funções, tipos, docstrings e código-fonte para sugerir ou gerar
-       dados de teste (valores para parâmetros, objetos mockados) que cubram casos de borda e diferentes
-       caminhos de execução.
-     - Benefício: Aumento da eficácia dos testes ao cobrir uma gama mais ampla de cenários.
+   - Phase 4: Intelligent Test Data Generation
+     - The LLM can analyze function signatures, types, docstrings, and source code to suggest or generate
+       test data (parameter values, mocked objects) that cover edge cases and different execution paths.
+     - Benefit: Increased effectiveness of tests by covering a wider range of scenarios.

@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import numpy as np
 
 try:
-    # Suprimir warnings do SWIG/FAISS temporariamente
+    # Suppress SWIG/FAISS warnings temporarily
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=DeprecationWarning, module="<frozen importlib._bootstrap>")
         import faiss

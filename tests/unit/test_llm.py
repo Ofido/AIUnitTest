@@ -620,6 +620,15 @@ def test_generate_embeddings_cache_miss_with_logging() -> None:
         temp_file.write("print('hello world')")
         source_file_path = temp_file.name
 
+    # Calculate the hash from the actual file content
+    with open(source_file_path, "rb") as f:
+        file_content = f.read()
+    content_hash = hashlib.sha256(file_content).hexdigest()
+    model_name_safe = model_name.replace("/", "_")
+    norm_str = "norm" if normalize else "unorm"
+    cache_filename = f"{content_hash}_{model_name_safe}_{norm_str}.npz"
+    cache_filepath = os.path.join(cache_dir, cache_filename)
+
     mock_model = MagicMock()
     mock_model.encode.return_value = np.array([[0.1, 0.2, 0.3]])
     with patch("ai_unit_test.llm.SentenceTransformer", return_value=mock_model):
@@ -630,6 +639,7 @@ def test_generate_embeddings_cache_miss_with_logging() -> None:
     assert np.array_equal(embeddings, [[0.1, 0.2, 0.3]])
 
     # Cleanup
+    os.unlink(cache_filepath)
     os.unlink(source_file_path)
 
 

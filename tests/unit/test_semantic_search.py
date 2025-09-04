@@ -1,5 +1,5 @@
 """
-Testes corrigidos para semantic_search.py - versão final
+Final version of fixed tests for semantic_search.py
 """
 
 from builtins import isinstance as original_isinstance
@@ -12,20 +12,20 @@ from ai_unit_test.semantic_search import search
 
 
 def test_search_with_faiss_index() -> None:
-    """Testa busca com índice FAISS mockado"""
+    """Tests search with a mocked FAISS index"""
 
-    # Mock do índice FAISS
+    # Mock FAISS index
     mock_index = MagicMock()
     mock_index.search.return_value = (
-        np.array([[0.9, 0.5, 0.1]]),  # scores (já convertidos, não distâncias)
-        np.array([[0, 1, 2]]),  # índices
+        np.array([[0.9, 0.5, 0.1]]),  # scores (already similarity, not distances)
+        np.array([[0, 1, 2]]),  # indices
     )
-    mock_index.d = 4  # dimensão do índice
+    mock_index.d = 4  # index dimension
 
-    # Mock do manifest
+    # Mock manifest
     mock_manifest = {"embedding_model": "all-MiniLM-L6-v2"}
 
-    # Mock dos metadata (chunks)
+    # Mock metadata (chunks)
     mock_metadata = ["chunk0", "chunk1", "chunk2"]
 
     with (
@@ -37,42 +37,42 @@ def test_search_with_faiss_index() -> None:
 
         mock_load.return_value = (mock_index, mock_metadata, mock_manifest)
 
-        # Mock do modelo
+        # Mock model
         mock_model = MagicMock()
         mock_model.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4]], dtype=np.float32)
         mock_transformer.return_value = mock_model
 
-        # Mock isinstance para retornar True apenas para FAISS
+        # Mock isinstance to return True only for FAISS
         def mock_isinstance_func(obj, cls):  # type: ignore  # noqa: ANN001
-            # Para o índice mock e FAISS, retornar True  # noqa: ANN201
+            # For the mock index and FAISS, return True  # noqa: ANN201
             if obj is mock_index and hasattr(cls, "__name__") and "Index" in str(cls):
                 return True
-            # Para outros casos, usar isinstance original
+            # For other cases, use original isinstance
             return original_isinstance(obj, cls)
 
         mock_isinstance.side_effect = mock_isinstance_func
 
-        # Executar busca com threshold baixo para pegar todos os resultados
+        # Run search with a low threshold to include all results
         results = search("test query", "dummy_dir", k=3, threshold=0.0)
 
     # Checks - function returns a list of tuples (metadata, score)
     assert len(results) == 3
-    assert results[0] == ("chunk0", 0.9)  # direct score from FAISS
-    assert results[1] == ("chunk1", 0.5)  # direct score from FAISS
-    assert results[2] == ("chunk2", 0.1)  # direct score from FAISS
+    assert results[0] == ("chunk0", 0.9)  # type: ignore[comparison-overlap] # direct score from FAISS
+    assert results[1] == ("chunk1", 0.5)  # type: ignore[comparison-overlap] # direct score from FAISS
+    assert results[2] == ("chunk2", 0.1)  # type: ignore[comparison-overlap] # direct score from FAISS
 
 
 def test_search_with_sklearn_index() -> None:
-    """Testa busca com índice sklearn mockado"""
-    # Mock do índice sklearn (sem método search, com kneighbors)
+    """Tests search with a mocked sklearn index"""
+    # Mock sklearn index (no search method, using kneighbors)
     mock_index = MagicMock()
-    del mock_index.search  # Remove search para forçar uso do sklearn
-    mock_index.kneighbors.return_value = (np.array([[0.1, 0.5, 0.9]]), np.array([[0, 1, 2]]))  # distâncias  # índices
+    del mock_index.search  # Remove search to force sklearn path
+    mock_index.kneighbors.return_value = (np.array([[0.1, 0.5, 0.9]]), np.array([[0, 1, 2]]))  # distances  # indices
 
-    # Mock do manifest
+    # Mock manifest
     mock_manifest = {"embedding_model": "all-MiniLM-L6-v2"}
 
-    # Mock dos metadata
+    # Mock metadata
     mock_metadata = ["chunk0", "chunk1", "chunk2"]
 
     with (
@@ -82,36 +82,36 @@ def test_search_with_sklearn_index() -> None:
 
         mock_load.return_value = (mock_index, mock_metadata, mock_manifest)
 
-        # Mock do modelo
+        # Mock model
         mock_model = MagicMock()
         mock_model.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4]], dtype=np.float32)
         mock_transformer.return_value = mock_model
 
-        # Executar busca com threshold baixo para pegar todos os resultados
+        # Run search with a low threshold to include all results
         results = search("test query", "dummy_dir", k=3, threshold=0.0)
 
-        # Verificações - sklearn converte distâncias para scores com 1 - distance
+        # Checks - sklearn converts distances to scores with 1 - distance
         assert len(results) == 3
-        assert results[0][0] == "chunk0"
+        assert results[0][0] == "chunk0"  # type: ignore[comparison-overlap]
         assert abs(results[0][1] - 0.9) < 1e-6  # 1 - 0.1
-        assert results[1][0] == "chunk1"
+        assert results[1][0] == "chunk1"  # type: ignore[comparison-overlap]
         assert abs(results[1][1] - 0.5) < 1e-6  # 1 - 0.5
-        assert results[2][0] == "chunk2"
+        assert results[2][0] == "chunk2"  # type: ignore[comparison-overlap]
         assert abs(results[2][1] - 0.1) < 1e-6  # 1 - 0.9
 
 
 def test_search_with_threshold_filtering() -> None:
-    """Testa filtragem por threshold"""
+    """Tests filtering by threshold"""
 
-    # Mock do índice FAISS
+    # Mock FAISS index
     mock_index = MagicMock()
-    mock_index.search.return_value = (np.array([[0.9, 0.5, 0.1]]), np.array([[0, 1, 2]]))  # scores  # índices
-    mock_index.d = 4  # dimensão do índice
+    mock_index.search.return_value = (np.array([[0.9, 0.5, 0.1]]), np.array([[0, 1, 2]]))  # scores  # indices
+    mock_index.d = 4  # index dimension
 
-    # Mock do manifest
+    # Mock manifest
     mock_manifest = {"embedding_model": "all-MiniLM-L6-v2"}
 
-    # Mock dos metadata
+    # Mock metadata
     mock_metadata = ["chunk0", "chunk1", "chunk2"]
 
     with (
@@ -123,12 +123,12 @@ def test_search_with_threshold_filtering() -> None:
 
         mock_load.return_value = (mock_index, mock_metadata, mock_manifest)
 
-        # Mock do modelo
+        # Mock model
         mock_model = MagicMock()
         mock_model.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4]], dtype=np.float32)
         mock_transformer.return_value = mock_model
 
-        # Mock isinstance para retornar True apenas para FAISS
+        # Mock isinstance to return True only for FAISS
         def mock_isinstance_func(obj, cls):  # type: ignore  # noqa: ANN201, ANN001
             if obj is mock_index and hasattr(cls, "__name__") and "Index" in str(cls):
                 return True
@@ -136,26 +136,26 @@ def test_search_with_threshold_filtering() -> None:
 
         mock_isinstance.side_effect = mock_isinstance_func
 
-        # Executar busca com threshold alto (só vai pegar scores > 0.8)
+        # Run search with a high threshold (only scores > 0.8)
         results = search("test query", "dummy_dir", k=3, threshold=0.8)
 
-        # Verificações - apenas o primeiro resultado deve passar no threshold
+        # Checks - only the first result should pass the threshold
         assert len(results) == 1
-        assert results[0] == ("chunk0", 0.9)
+        assert results[0] == ("chunk0", 0.9)  # type: ignore[comparison-overlap]
 
 
 def test_search_empty_results() -> None:
-    """Testa busca que retorna resultados vazios devido ao threshold"""
+    """Tests search that returns empty results due to threshold"""
 
-    # Mock do índice FAISS
+    # Mock FAISS index
     mock_index = MagicMock()
-    mock_index.search.return_value = (np.array([[0.1, 0.05, 0.01]]), np.array([[0, 1, 2]]))  # scores baixos  # índices
-    mock_index.d = 4  # dimensão do índice
+    mock_index.search.return_value = (np.array([[0.1, 0.05, 0.01]]), np.array([[0, 1, 2]]))  # low scores  # indices
+    mock_index.d = 4  # index dimension
 
-    # Mock do manifest
+    # Mock manifest
     mock_manifest = {"embedding_model": "all-MiniLM-L6-v2"}
 
-    # Mock dos metadata
+    # Mock metadata
     mock_metadata = ["chunk0", "chunk1", "chunk2"]
 
     with (
@@ -167,12 +167,12 @@ def test_search_empty_results() -> None:
 
         mock_load.return_value = (mock_index, mock_metadata, mock_manifest)
 
-        # Mock do modelo
+        # Mock model
         mock_model = MagicMock()
         mock_model.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4]], dtype=np.float32)
         mock_transformer.return_value = mock_model
 
-        # Mock isinstance para retornar True apenas para FAISS
+        # Mock isinstance to return True only for FAISS
         def mock_isinstance_func(obj, cls):  # type: ignore  # noqa: ANN201, ANN001
             if obj is mock_index and hasattr(cls, "__name__") and "Index" in str(cls):
                 return True
@@ -180,34 +180,34 @@ def test_search_empty_results() -> None:
 
         mock_isinstance.side_effect = mock_isinstance_func
 
-        # Executar busca com threshold alto
+        # Run search with a high threshold
         results = search("test query", "dummy_dir", k=3, threshold=0.5)
 
-        # Verificações - nenhum resultado deve passar no threshold
+        # Checks - no result should pass the threshold
         assert len(results) == 0
 
 
 def test_search_invalid_index_dir() -> None:
-    """Testa erro quando diretório do índice é inválido"""
+    """Tests error when the index directory is invalid"""
     with patch("ai_unit_test.semantic_search.load_faiss_index") as mock_load:
         mock_load.side_effect = FileNotFoundError("Index directory not found")
 
-        # Executar busca deve lançar exceção
+        # Running search should raise an exception
         with pytest.raises(FileNotFoundError, match="Index directory not found"):
             search("test query", "invalid_dir", k=3)
 
 
 def test_search_dimension_mismatch() -> None:
-    """Testa erro quando dimensões não batem com FAISS"""
+    """Tests error when dimensions don't match for FAISS"""
 
-    # Mock do índice FAISS
+    # Mock FAISS index
     mock_index = MagicMock()
-    mock_index.d = 10  # índice espera 10 dimensões
+    mock_index.d = 10  # index expects 10 dimensions
 
-    # Mock do manifest
+    # Mock manifest
     mock_manifest = {"embedding_model": "all-MiniLM-L6-v2"}
 
-    # Mock dos metadata
+    # Mock metadata
     mock_metadata = ["chunk0", "chunk1", "chunk2"]
 
     with (
@@ -219,12 +219,12 @@ def test_search_dimension_mismatch() -> None:
 
         mock_load.return_value = (mock_index, mock_metadata, mock_manifest)
 
-        # Mock do modelo que retorna dimensão errada (4D em vez de 10D)
+        # Mock model that returns wrong dimension (4D instead of 10D)
         mock_model = MagicMock()
         mock_model.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4]], dtype=np.float32)
         mock_transformer.return_value = mock_model
 
-        # Mock isinstance para retornar True para FAISS
+        # Mock isinstance to return True for FAISS
         def mock_isinstance_func(obj, cls):  # type: ignore # noqa: ANN201, ANN001
             if obj is mock_index and hasattr(cls, "__name__") and "Index" in str(cls):
                 return True
@@ -232,22 +232,22 @@ def test_search_dimension_mismatch() -> None:
 
         mock_isinstance.side_effect = mock_isinstance_func
 
-        # Executar busca deve lançar exceção por dimensão incompatível
+        # Running search should raise an exception due to incompatible dimension
         with pytest.raises(ValueError, match="query embedding dimension .* incompatible"):
             search("test query", "dummy_dir", k=3)
 
 
 def test_search_unsupported_index_type() -> None:
-    """Testa erro quando tipo de índice não é suportado"""
-    # Mock de um índice que não é nem FAISS nem sklearn
+    """Tests error when index type is not supported"""
+    # Mock an index that is neither FAISS nor sklearn
     mock_index = MagicMock()
     del mock_index.search  # Remove search
     del mock_index.kneighbors  # Remove kneighbors
 
-    # Mock do manifest
+    # Mock manifest
     mock_manifest = {"embedding_model": "all-MiniLM-L6-v2"}
 
-    # Mock dos metadata
+    # Mock metadata
     mock_metadata = ["chunk0", "chunk1", "chunk2"]
 
     with (
@@ -257,11 +257,11 @@ def test_search_unsupported_index_type() -> None:
 
         mock_load.return_value = (mock_index, mock_metadata, mock_manifest)
 
-        # Mock do modelo
+        # Mock model
         mock_model = MagicMock()
         mock_model.encode.return_value = np.array([[0.1, 0.2, 0.3, 0.4]], dtype=np.float32)
         mock_transformer.return_value = mock_model
 
-        # Executar busca deve lançar exceção de tipo não suportado
+        # Running search should raise unsupported type exception
         with pytest.raises(TypeError, match="Unsupported index type"):
             search("test query", "dummy_dir", k=3)

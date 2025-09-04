@@ -38,7 +38,7 @@ def test_save_faiss_index_validation_error() -> None:
         save_faiss_index([[0.1], [0.2, 0.3]], [{"a": 1}, {"b": 2}], "any_dir")
 
     with pytest.raises(ValueError, match="Not all items in the metadata list are valid"):
-        save_faiss_index([[0.1]], ["not-a-dict"], "any_dir")
+        save_faiss_index([[0.1]], ["not-a-dict"], "any_dir")  # type: ignore[list-item]
 
 
 def test_save_faiss_index_mocked(tmp_path: Path, mocker: MockerFixture) -> None:

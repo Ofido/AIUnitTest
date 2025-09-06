@@ -146,7 +146,16 @@ def test_save_and_load_sklearn_index(tmp_path: Path, mocker: MockerFixture) -> N
 
 def test_faiss_availability() -> None:
     """Tests the FAISS availability flag."""
-    assert FAISS_AVAILABLE == (not isinstance(faiss, MagicMock))  # pyright: ignore[reportPossiblyUnboundVariable]
+    if FAISS_AVAILABLE:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning, module="<frozen importlib._bootstrap>")
+            import faiss
+        assert not isinstance(faiss, MagicMock)
+    else:
+        # faiss should not be importable
+        import sys
+
+        assert "faiss" not in sys.modules
 
 
 def test_save_faiss_index_valid_inputs() -> None:

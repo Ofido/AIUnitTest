@@ -685,7 +685,7 @@ def test_extract_test_patterns_from_pyproject_default(mock_logger_debug: MagicMo
     Tests that the default test patterns are returned when no test
     patterns are specified in the pyproject.toml.
     """
-    data = {"tool": {"ai-unit-test": {}}}  # type: ignore
+    data = {"tool": {"ai-unit-test": {}}}  # type: ignore[var-annotated]
     patterns = extract_test_patterns_from_pyproject(data)
     assert patterns == ["test_*.py", "*_test.py"]
     mock_logger_debug.assert_called_with("Found test patterns: ['test_*.py', '*_test.py']")

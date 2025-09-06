@@ -43,7 +43,7 @@ def test_search_with_faiss_index() -> None:
         mock_transformer.return_value = mock_model
 
         # Mock isinstance to return True only for FAISS
-        def mock_isinstance_func(obj, cls):  # type: ignore  # noqa: ANN001
+        def mock_isinstance_func(obj, cls):  # type: ignore[no-untyped-def]  # noqa: ANN001
             # For the mock index and FAISS, return True  # noqa: ANN201
             if obj is mock_index and hasattr(cls, "__name__") and "Index" in str(cls):
                 return True
@@ -129,7 +129,7 @@ def test_search_with_threshold_filtering() -> None:
         mock_transformer.return_value = mock_model
 
         # Mock isinstance to return True only for FAISS
-        def mock_isinstance_func(obj, cls):  # type: ignore  # noqa: ANN201, ANN001
+        def mock_isinstance_func(obj, cls):  # type: ignore[no-untyped-def]  # noqa: ANN201, ANN001
             if obj is mock_index and hasattr(cls, "__name__") and "Index" in str(cls):
                 return True
             return original_isinstance(obj, cls)
@@ -173,7 +173,7 @@ def test_search_empty_results() -> None:
         mock_transformer.return_value = mock_model
 
         # Mock isinstance to return True only for FAISS
-        def mock_isinstance_func(obj, cls):  # type: ignore  # noqa: ANN201, ANN001
+        def mock_isinstance_func(obj, cls):  # type: ignore[no-untyped-def]  # noqa: ANN201, ANN001
             if obj is mock_index and hasattr(cls, "__name__") and "Index" in str(cls):
                 return True
             return original_isinstance(obj, cls)
@@ -225,7 +225,7 @@ def test_search_dimension_mismatch() -> None:
         mock_transformer.return_value = mock_model
 
         # Mock isinstance to return True for FAISS
-        def mock_isinstance_func(obj, cls):  # type: ignore # noqa: ANN201, ANN001
+        def mock_isinstance_func(obj, cls):  # type: ignore[no-untyped-def] # noqa: ANN201, ANN001
             if obj is mock_index and hasattr(cls, "__name__") and "Index" in str(cls):
                 return True
             return original_isinstance(obj, cls)

@@ -66,7 +66,7 @@ def insert_new_test(existing_content: str, new_test: str) -> str:
 
     if guard_idx != -1 and guard_text is not None:
         before = existing_content[:guard_idx]
-        after = existing_content[guard_idx + len(guard_text) :]  # noqa: E203
+        after = existing_content[guard_idx + len(guard_text) :]
         # Keep existing whitespace before the guard and insert the new test with spacing
         result = before + "\n\n" + new_test_clean + "\n\n" + guard_text + after
         return result

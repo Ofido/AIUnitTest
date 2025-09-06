@@ -48,7 +48,7 @@ class ASTChunker:
                 # Handle code before the current node as a module-level chunk
                 if child_node.lineno - 1 > last_end:
                     module_chunk_code = "\n".join(
-                        file_content.splitlines()[last_end : child_node.lineno - 1],  # noqa: E203
+                        file_content.splitlines()[last_end : child_node.lineno - 1],
                     )
                     if module_chunk_code.strip():
                         chunks.append(
@@ -149,12 +149,12 @@ class ASTChunker:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             # Extract just the signature line(s)
             signature_end_line = node.body[0].lineno - 1 if node.body else node.lineno
-            signature_lines = file_content.splitlines(True)[node.lineno - 1 : signature_end_line]  # noqa: E203
+            signature_lines = file_content.splitlines(True)[node.lineno - 1 : signature_end_line]
             signature = "".join(signature_lines)
         elif isinstance(node, ast.ClassDef):
             # Extract class definition line
             signature_end_line = node.body[0].lineno - 1 if node.body else node.lineno
-            signature_lines = file_content.splitlines(True)[node.lineno - 1 : signature_end_line]  # noqa: E203
+            signature_lines = file_content.splitlines(True)[node.lineno - 1 : signature_end_line]
             signature = "".join(signature_lines)
 
         sub_chunks: list[Chunk] = []

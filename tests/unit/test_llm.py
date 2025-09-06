@@ -354,7 +354,7 @@ async def test_update_test_with_llm_with_empty_coverage_lines() -> None:
     source_code = "def add(a, b): return a + b"
     test_code = "def test_add(): assert add(1, 2) == 3"
     file_name = "dummy.py"
-    coverage_lines = []  # type: ignore
+    coverage_lines = []  # type: ignore[var-annotated]
     other_tests_content = ""
     test_style = "pytest_function"
 
@@ -528,7 +528,7 @@ async def test_update_test_with_llm_with_no_coverage_lines() -> None:
     source_code = "def subtract(a, b): return a - b"
     test_code = "def test_subtract(): assert subtract(5, 3) == 2"
     file_name = "dummy.py"
-    coverage_lines = []  # type: ignore
+    coverage_lines = []  # type: ignore[var-annotated]
     other_tests_content = ""
     test_style = "pytest_function"
 

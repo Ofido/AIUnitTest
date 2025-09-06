@@ -55,7 +55,12 @@ dev = [
 [tool.black]
 line-length = 120
 target-version = ["py313"]
-exclude = "src/ai_unit_test/_version.py"
+exclude = '''
+/(
+    src/ai_unit_test/_version\.py
+  | tests/fake_project
+)/
+'''
 
 [tool.isort]
 profile = "black"
@@ -76,7 +81,14 @@ known_third_party = [
 known_first_party = ["ai_unit_test"]
 
 default_section = "THIRDPARTY"
-skip = ["build", "dist", ".venv", "env", "src/ai_unit_test/_version.py"]
+skip = [
+  "build",
+  "dist",
+  ".venv",
+  "env",
+  "src/ai_unit_test/_version.py",
+  "tests/fake_project",
+]
 
 [tool.flake8-annotations]
 suppress-none-returning = true
@@ -98,6 +110,7 @@ exclude_dirs = [
   "env",
   "examples",
   "node_modules",
+  "tests/fake_project",
 ]
 
 [tool.mypy]

@@ -23,6 +23,12 @@ repos:
         stages:
           - commit-msg
 
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.20.0
+    hooks:
+      - id: pyupgrade
+        args: ["--py313-plus"]
+
   - repo: https://github.com/pycqa/isort
     rev: 6.0.1
     hooks:
@@ -33,12 +39,6 @@ repos:
     hooks:
       - id: black
         args: ["--config", "pyproject.toml"]
-
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.20.0
-    hooks:
-      - id: pyupgrade
-        args: ["--py313-plus"]
 
   - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.18.1

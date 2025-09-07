@@ -2,27 +2,98 @@
 
 import asyncio
 import logging
+from typing import List, Optional
 
 import typer
 
-from ai_unit_test.core.exceptions import AIUnitTestError, ConfigurationError
 from ai_unit_test.services.orchestration_service import OrchestrationService
 
 logger = logging.getLogger(__name__)
 app = typer.Typer()
 
 
-# CLI Exception handler
-def handle_cli_exception(e: Exception) -> None:
-    """Handle exceptions at CLI level with user-friendly messages."""
-    if isinstance(e, ConfigurationError):
-        typer.echo(f"❌ Configuration Error: {e}", err=True)
-        typer.echo("💡 Check your pyproject.toml file or command line arguments.", err=True)
-    elif isinstance(e, AIUnitTestError):
-        typer.echo(f"❌ Error: {e}", err=True)
+@app.command()
+def generate_tests(
+    folders: list[str] | None = typer.Option(
+        None, "--folders", "-f", help="Source code folders to analyze for coverage"
+    ),
+    tests_folder: str | None = typer.Option(None, "--tests-folder", "-t", help="Directory containing test files"),
+    coverage_file: str = typer.Option(".coverage", "--coverage-file", "-c", help="Path to coverage data file"),
+    auto: bool = typer.Option(False, "--auto", "-a", help="Auto-discover configuration from pyproject.toml"),
+    index_dir: str | None = typer.Option(None, "--index-dir", help="Directory containing semantic search index"),
+) -> None:
+    """Generate unit tests for uncovered code using AI."""
+
+    # Create orchestration service
+    config = {"indexing": {"index_directory": index_dir}} if index_dir else {}
+    orchestration_service = OrchestrationService(config)
+
+    # Run workflow
+    typer.echo("🚀 Starting test generation...")
+
+    results = asyncio.run(
+        orchestration_service.run_test_generation_workflow(
+            folders=folders, tests_folder=tests_folder, coverage_file=coverage_file, auto_discovery=auto
+        )
+    )
+
+    # Display results
+    _display_test_generation_results(results)
+
+    # Exit with appropriate code
+    if results["status"] == "error":
+        raise typer.Exit(1)
+    elif results["status"] == "partial_success":
+        typer.echo("⚠️  Some files had issues, but tests were generated for others.")
+        raise typer.Exit(2)
     else:
-        typer.echo(f"❌ Unexpected error: {e}", err=True)
-        logger.exception("Unexpected error in CLI")
+        typer.echo("✅ Test generation completed successfully!")
+
+
+@app.command()
+def create_index(
+    folders: list[str] = typer.Option(..., "--folders", "-f", help="Source code folders to index"),
+    index_dir: str = typer.Option("data/faiss_index", "--index-dir", help="Directory to save the index"),
+    force: bool = typer.Option(False, "--force", help="Force rebuild even if index exists"),
+) -> None:
+    """Create semantic search index from source code."""
+
+    orchestration_service = OrchestrationService()
+
+    typer.echo("🏗️  Creating semantic search index...")
+
+    results = asyncio.run(
+        orchestration_service.run_index_creation_workflow(
+            source_folders=folders, index_directory=index_dir, force_rebuild=force
+        )
+    )
+
+    _display_index_creation_results(results)
+
+    if results["status"] == "error":
+        raise typer.Exit(1)
+    else:
+        typer.echo("✅ Index creation completed!")
+
+
+@app.command()
+def health_check() -> None:
+    """Check system health and configuration."""
+
+    orchestration_service = OrchestrationService()
+
+    typer.echo("🏥 Running health check...")
+
+    results = asyncio.run(orchestration_service.run_health_check_workflow())
+
+    _display_health_check_results(results)
+
+    if results["status"] == "unhealthy":
+        raise typer.Exit(1)
+    elif results["status"] == "error":
+        raise typer.Exit(2)
+    else:
+        typer.echo("✅ System is healthy!")
 
 
 @app.command()
@@ -63,6 +134,9 @@ def generate_tests(
         else:
             typer.echo("✅ Test generation completed successfully!")
 
+    except (SystemExit, typer.Exit):
+        # Normal CLI exit, don't handle as error
+        raise
     except Exception as e:
         handle_cli_exception(e)
         raise typer.Exit(1)
@@ -94,6 +168,9 @@ def create_index(
         else:
             typer.echo("✅ Index creation completed!")
 
+    except (SystemExit, typer.Exit):
+        # Normal CLI exit, don't handle as error
+        raise
     except Exception as e:
         handle_cli_exception(e)
         raise typer.Exit(1)
@@ -119,6 +196,9 @@ def health_check() -> None:
         else:
             typer.echo("✅ System is healthy!")
 
+    except (SystemExit, typer.Exit):
+        # Normal CLI exit, don't handle as error
+        raise
     except Exception as e:
         handle_cli_exception(e)
         raise typer.Exit(1)

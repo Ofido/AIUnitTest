@@ -131,7 +131,16 @@ class SystemOrchestrator:
         exception_str = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
 
         if self.logger:
-            if issubclass(exc_type, AIUnitTestError):
+            # Import here to avoid circular imports
+            from ai_unit_test.core.exceptions import ConfigurationError
+
+            if issubclass(exc_type, ConfigurationError):
+                # Configuration error - provide helpful user message
+                self.logger.error(f"Configuration error: {exc_value}")
+                self.logger.debug(f"Configuration error traceback:\n{exception_str}")
+                print(f"❌ Configuration Error: {exc_value}", file=sys.stderr)
+                print("💡 Check your pyproject.toml file or command line arguments.", file=sys.stderr)
+            elif issubclass(exc_type, AIUnitTestError):
                 # Known application error - log as error but don't include traceback in user message
                 self.logger.error(f"Application error: {exc_value}")
                 self.logger.debug(f"Application error traceback:\n{exception_str}")

@@ -1,4 +1,5 @@
 """Index organizer implementations."""
 
-# Implementations will be available here in Phase 2
-__all__: list[str] = []
+from .faiss_organizer import FaissIndexOrganizer
+
+__all__ = ["FaissIndexOrganizer"]

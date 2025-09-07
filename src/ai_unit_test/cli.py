@@ -1,392 +1,259 @@
-import ast
+"""CLI interface for AI Unit Test - Pure presentation layer."""
+
 import asyncio
 import logging
-import sys
-import tomllib
-from pathlib import Path
-from typing import Any, cast
 
 import typer
 
-from ai_unit_test.chunking import chunk_test_file
-from ai_unit_test.coverage_helper import collect_missing_lines
-from ai_unit_test.file_helper import (
-    extract_function_source,
-    find_all_test_files,
-    find_relevant_tests,
-    find_test_file,
-    insert_new_test,
-    read_file_content,
-    write_file_content,
-)
-from ai_unit_test.indexing import save_faiss_index
-from ai_unit_test.llm import generate_embeddings, update_test_with_llm
-from ai_unit_test.semantic_search import search as semantic_search
+from ai_unit_test.core.exceptions import AIUnitTestError, ConfigurationError
+from ai_unit_test.services.orchestration_service import OrchestrationService
 
 logger = logging.getLogger(__name__)
-
 app = typer.Typer()
 
 
-PYPROJECT_TOML_PATH = Path("pyproject.toml")
-
-
-def load_pyproject_config(pyproject_path: Path = PYPROJECT_TOML_PATH) -> dict[str, Any]:
-    """Loads the pyproject.toml file, if it exists, otherwise returns an empty dictionary."""
-    logger.debug(f"Attempting to load pyproject config from: {pyproject_path}")
-    if not pyproject_path.exists():
-        logger.debug("pyproject.toml not found.")
-        return {}
-    with pyproject_path.open("rb") as fp:
-        config: dict[str, Any] = tomllib.load(fp)
-        logger.debug("pyproject.toml loaded successfully.")
-        return config
-
-
-def extract_from_pyproject(
-    data: dict[str, Any],
-) -> tuple[list[str], str | None, str | None]:
-    """
-    Extracts (source_folders, tests_folder, coverage_file)
-    from the standard pyproject.toml structure.
-    """
-    logger.debug("Extracting configuration from pyproject.toml data.")
-    folders: list[str] = []
-    tests_folder: str | None = None
-    coverage_path: str | None = None
-
-    folders = data.get("tool", {}).get("coverage", {}).get("run", {}).get("source", [])
-    logger.debug(f"Found source folders: {folders}")
-
-    tests_folder = data.get("tool", {}).get("pytest", {}).get("ini_options", {}).get("testpaths", [None])[0]
-    logger.debug(f"Found tests folder: {tests_folder}")
-
-    if not tests_folder and Path("tests").is_dir():
-        logger.debug("No tests folder in pyproject.toml, falling back to 'tests' directory.")
-        tests_folder = "tests"
-
-    coverage_path = data.get("tool", {}).get("coverage", {}).get("run", {}).get("data_file")
-    logger.debug(f"Found coverage file path: {coverage_path}")
-
-    return folders, tests_folder, coverage_path
-
-
-def extract_test_patterns_from_pyproject(data: dict[str, Any]) -> list[str]:
-    """Extracts the test patterns from the pyproject.toml file."""
-    logger.debug("Extracting test patterns from pyproject.toml data.")
-    patterns = cast(
-        list[str], data.get("tool", {}).get("ai-unit-test", {}).get("test-patterns", ["test_*.py", "*_test.py"])
-    )
-    logger.debug(f"Found test patterns: {patterns}")
-    return patterns
-
-
-def _resolve_paths_from_config(
-    folders: list[str] | None,
-    tests_folder: str | None,
-    coverage_file: str,
-    auto: bool,
-) -> tuple[list[str], str, str]:
-    if auto or not (folders and tests_folder):
-        logger.info("Auto-discovery enabled or folders/tests_folder not provided. Loading from pyproject.toml.")
-        cfg: dict[str, Any] = load_pyproject_config()
-        folders_from_cfg: list[str]
-        tests_dir_from_cfg: str | None
-        cov_file_from_cfg: str | None
-        folders_from_cfg, tests_dir_from_cfg, cov_file_from_cfg = extract_from_pyproject(cfg)
-
-        if not folders:
-            folders = folders_from_cfg
-            logger.debug(f"Using source folders from pyproject.toml: {folders}")
-        if not tests_folder:
-            tests_folder = tests_dir_from_cfg
-            logger.debug(f"Using tests folder from pyproject.toml: {tests_folder}")
-        if coverage_file == ".coverage" and cov_file_from_cfg:
-            coverage_file = cov_file_from_cfg
-            logger.debug(f"Using coverage file from pyproject.toml: {coverage_file}")
-
-    if not folders:
-        logger.error("Source code folders not defined (--folders) and not found in pyproject.toml.")
-        sys.exit(1)
-    if not tests_folder:
-        logger.error("Tests folder not defined (--tests-folder) and not found in pyproject.toml.")
-        sys.exit(1)
-
-    return folders, tests_folder, coverage_file
-
-
-def _detect_test_style(test_file_path: Path) -> str:
-    """Detects if the test file uses unittest.TestCase classes or pytest functions."""
-    test_content = read_file_content(test_file_path)
-    if not test_content:
-        return "unknown"
-
-    try:
-        tree = ast.parse(test_content)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef):
-                for base in node.bases:
-                    if isinstance(base, ast.Attribute) and base.attr == "TestCase":
-                        return "unittest_class"
-                    elif isinstance(base, ast.Name) and base.id == "TestCase":
-                        return "unittest_class"
-        # If no TestCase classes are found, assume pytest function style
-        return "pytest_function"
-    except SyntaxError:
-        logger.warning(f"Could not parse test file {test_file_path} for style detection.")
-        return "unknown"
-
-
-async def _process_missing_info(missing_info: dict[Path, list[int]], tests_folder: str) -> None:
-    for source_file_path, uncovered_lines_list in missing_info.items():
-        logger.info(f"Processing source file: {source_file_path}")
-        test_file: Path | None = find_test_file(str(source_file_path), tests_folder)
-        if not test_file:
-            logger.warning(f"Test file not found for {source_file_path}, skipping.")
-            continue
-
-        # Detect test style
-        test_style = _detect_test_style(test_file)
-        logger.debug(f"Detected test style for {test_file}: {test_style}")
-
-        # Get all logical chunks (classes and functions) from the source file
-        code_chunks = chunk_test_file(str(source_file_path))
-
-        other_tests_content = read_file_content(test_file)
-
-        for chunk in code_chunks:
-            chunk_uncovered_lines = []
-            for line_num in uncovered_lines_list:
-                if chunk.start_line <= line_num <= chunk.end_line:
-                    chunk_uncovered_lines.append(line_num)
-
-            if not chunk_uncovered_lines:
-                continue  # No uncovered lines in this chunk, skip
-
-            logger.info(
-                f"Updating {test_file} for chunk '{chunk.name}' "
-                f"(lines {chunk.start_line}-{chunk.end_line}) with uncovered lines: {chunk_uncovered_lines}"
-            )
-            try:
-                existing_content = read_file_content(test_file)
-                updated_test: str = await update_test_with_llm(
-                    chunk.source_code,  # Pass chunk source code
-                    existing_content or "",  # Still pass the whole test file for context
-                    str(source_file_path),
-                    chunk_uncovered_lines,  # Pass chunk-specific uncovered lines
-                    other_tests_content,
-                    test_style,  # Pass the detected test style
-                )
-                new_content = insert_new_test(existing_content, updated_test)
-                write_file_content(test_file, new_content)  # Overwrite the file with the new content
-                logger.info(f"✅ Test file updated successfully: {test_file}")
-            except Exception as exc:  # pragma: no cover
-                logger.error(f"Error updating {test_file}: {exc}")
-
-
-async def _main(
-    folders: list[str] | None = None,
-    tests_folder: str | None = None,
-    coverage_file: str = ".coverage",
-    auto: bool = False,
-) -> None:
-    logger.info("Starting AI Unit Test generation process.")
-    logger.debug(
-        f"Initial parameters: folders={folders}, "
-        f"tests_folder={tests_folder}, "
-        f"coverage_file={coverage_file}, "
-        f"auto={auto}"
-    )
-
-    folders, tests_folder, coverage_file = _resolve_paths_from_config(folders, tests_folder, coverage_file, auto)
-
-    logger.info(f"Using source folders: {folders}")
-    logger.info(f"Using tests folder: {tests_folder}")
-    logger.info(f"Using coverage file: {coverage_file}")
-
-    if not Path(coverage_file).exists():
-        logger.error(f"Coverage file not found: {coverage_file}")
-        sys.exit(1)
-
-    missing_info = collect_missing_lines(coverage_file)
-    if not missing_info:
-        logger.info("No files with missing coverage 🎉")
-        return
-    logger.info(f"👉 Found {len(missing_info)} files with missing coverage.")
-
-    await _process_missing_info(missing_info, tests_folder)
+# CLI Exception handler
+def handle_cli_exception(e: Exception) -> None:
+    """Handle exceptions at CLI level with user-friendly messages."""
+    if isinstance(e, ConfigurationError):
+        typer.echo(f"❌ Configuration Error: {e}", err=True)
+        typer.echo("💡 Check your pyproject.toml file or command line arguments.", err=True)
+    elif isinstance(e, AIUnitTestError):
+        typer.echo(f"❌ Error: {e}", err=True)
+    else:
+        typer.echo(f"❌ Unexpected error: {e}", err=True)
+        logger.exception("Unexpected error in CLI")
 
 
 @app.command()
-def func(
-    file_path: str,
-    function_name: str,
-    tests_folder: str | None = None,
-    auto: bool = False,
+def generate_tests(
+    folders: list[str] | None = typer.Option(
+        None, "--folders", "-f", help="Source code folders to analyze for coverage"
+    ),
+    tests_folder: str | None = typer.Option(None, "--tests-folder", "-t", help="Directory containing test files"),
+    coverage_file: str = typer.Option(".coverage", "--coverage-file", "-c", help="Path to coverage data file"),
+    auto: bool = typer.Option(False, "--auto", "-a", help="Auto-discover configuration from pyproject.toml"),
+    index_dir: str | None = typer.Option(None, "--index-dir", help="Directory containing semantic search index"),
 ) -> None:
-    """
-    Generates a test for a specific function in a file.
-    """
-    logger.info(f"Generating test for function '{function_name}' in file '{file_path}'.")
+    """Generate unit tests for uncovered code using AI."""
 
-    if auto or not tests_folder:
-        logger.info("Auto-discovery enabled or tests_folder not provided. Loading from pyproject.toml.")
-        cfg: dict[str, Any] = load_pyproject_config()
-        _, tests_dir_from_cfg, _ = extract_from_pyproject(cfg)
-
-        if not tests_folder:
-            tests_folder = tests_dir_from_cfg
-            logger.debug(f"Using tests folder from pyproject.toml: {tests_folder}")
-
-    if not tests_folder:
-        logger.error("Tests folder not defined (--tests-folder) and not found in pyproject.toml.")
-        sys.exit(1)
-
-    source_code = extract_function_source(file_path, function_name)
-    if not source_code:
-        logger.error(f"Function '{function_name}' not found in '{file_path}'.")
-        sys.exit(1)
-
-    test_file: Path | None = find_test_file(file_path, tests_folder)
-    if not test_file:
-        logger.warning(f"Test file not found for {file_path}, skipping.")
-        return
-
-    # Detect test style
-    test_style = _detect_test_style(test_file)
-    logger.debug(f"Detected test style for {test_file}: {test_style}")
-
-    # Read all other test files for context
-    other_tests_content = find_relevant_tests(file_path, tests_folder)
-
-    logger.info(f"Updating {test_file} for function '{function_name}'.")
     try:
-        existing_content = read_file_content(test_file)
-        updated_test: str = asyncio.run(
-            update_test_with_llm(source_code, existing_content, str(file_path), [], other_tests_content, test_style)
+        # Create orchestration service
+        config = {"indexing": {"index_directory": index_dir}} if index_dir else {}
+        orchestration_service = OrchestrationService(config)
+
+        # Run workflow
+        typer.echo("🚀 Starting test generation...")
+
+        results = asyncio.run(
+            orchestration_service.run_test_generation_workflow(
+                folders=folders, tests_folder=tests_folder, coverage_file=coverage_file, auto_discovery=auto
+            )
         )
-        new_content = insert_new_test(existing_content, updated_test)
-        write_file_content(test_file, new_content)
-        logger.info(f"✅ Test file updated successfully: {test_file}")
-    except Exception as exc:  # pragma: no cover
-        logger.error(f"Error updating {test_file}: {exc}")
+
+        # Display results
+        _display_test_generation_results(results)
+
+        # Exit with appropriate code
+        if results["status"] == "error":
+            raise typer.Exit(1)
+        elif results["status"] == "partial_success":
+            typer.echo("⚠️  Some files had issues, but tests were generated for others.")
+            raise typer.Exit(2)
+        else:
+            typer.echo("✅ Test generation completed successfully!")
+
+    except Exception as e:
+        handle_cli_exception(e)
+        raise typer.Exit(1)
 
 
+@app.command()
+def create_index(
+    folders: list[str] = typer.Option(..., "--folders", "-f", help="Source code folders to index"),
+    index_dir: str = typer.Option("data/faiss_index", "--index-dir", help="Directory to save the index"),
+    force: bool = typer.Option(False, "--force", help="Force rebuild even if index exists"),
+) -> None:
+    """Create semantic search index from source code."""
+
+    try:
+        orchestration_service = OrchestrationService()
+
+        typer.echo("🏗️  Creating semantic search index...")
+
+        results = asyncio.run(
+            orchestration_service.run_index_creation_workflow(
+                source_folders=folders, index_directory=index_dir, force_rebuild=force
+            )
+        )
+
+        _display_index_creation_results(results)
+
+        if results["status"] == "error":
+            raise typer.Exit(1)
+        else:
+            typer.echo("✅ Index creation completed!")
+
+    except Exception as e:
+        handle_cli_exception(e)
+        raise typer.Exit(1)
+
+
+@app.command()
+def health_check() -> None:
+    """Check system health and configuration."""
+
+    try:
+        orchestration_service = OrchestrationService()
+
+        typer.echo("🏥 Running health check...")
+
+        results = asyncio.run(orchestration_service.run_health_check_workflow())
+
+        _display_health_check_results(results)
+
+        if results["status"] == "unhealthy":
+            raise typer.Exit(1)
+        elif results["status"] == "error":
+            raise typer.Exit(2)
+        else:
+            typer.echo("✅ System is healthy!")
+
+    except Exception as e:
+        handle_cli_exception(e)
+        raise typer.Exit(1)
+
+
+def _display_test_generation_results(results: dict) -> None:
+    """Display test generation results in user-friendly format."""
+
+    typer.echo(f"\n📊 Test Generation Results:")
+    typer.echo(f"  Status: {results['status']}")
+    typer.echo(f"  Files processed: {results.get('files_processed', 0)}")
+    typer.echo(f"  Tests generated: {results.get('tests_generated', 0)}")
+
+    if results.get("workflow_duration_seconds"):
+        typer.echo(f"  Duration: {results['workflow_duration_seconds']:.2f}s")
+
+    # Display file-specific results
+    file_results = results.get("file_results", {})
+    if file_results:
+        typer.echo(f"\n📁 File Results:")
+        for file_path, file_result in file_results.items():
+            status_icon = "✅" if file_result.get("test_generated") else "⚠️"
+            typer.echo(f"  {status_icon} {file_path}: {file_result.get('status', 'unknown')}")
+
+    # Display errors
+    errors = results.get("errors", [])
+    if errors:
+        typer.echo(f"\n❌ Errors:")
+        for error in errors:
+            typer.echo(f"  • {error}")
+
+
+def _display_index_creation_results(results: dict) -> None:
+    """Display index creation results."""
+
+    typer.echo(f"\n📚 Index Creation Results:")
+    typer.echo(f"  Status: {results['status']}")
+
+    if results["status"] == "error":
+        typer.echo(f"  Error: {results.get('error', 'Unknown error')}")
+
+
+def _display_health_check_results(results: dict) -> None:
+    """Display health check results."""
+
+    typer.echo(f"\n🏥 Health Check Results:")
+    typer.echo(f"  Overall Status: {results['status']}")
+
+    checks = results.get("checks", {})
+    for check_name, check_result in checks.items():
+        status_icon = "✅" if check_result.get("healthy") else "❌"
+        typer.echo(f"  {status_icon} {check_name.title()}: {'Healthy' if check_result.get('healthy') else 'Unhealthy'}")
+
+        if not check_result.get("healthy") and "error" in check_result:
+            typer.echo(f"      Error: {check_result['error']}")
+
+
+# Legacy command aliases for backward compatibility
 @app.command()
 def main(
-    folders: list[str] | None = None,
-    tests_folder: str | None = None,
-    coverage_file: str = ".coverage",
-    auto: bool = False,
+    folders: list[str] | None = typer.Option(
+        None, "--folders", "-f", help="Source code folders to analyze for coverage"
+    ),
+    tests_folder: str | None = typer.Option(None, "--tests-folder", "-t", help="Directory containing test files"),
+    coverage_file: str = typer.Option(".coverage", "--coverage-file", "-c", help="Path to coverage data file"),
+    auto: bool = typer.Option(False, "--auto", "-a", help="Auto-discover configuration from pyproject.toml"),
 ) -> None:
-    """
-    Automatically updates unit tests using the .coverage file and
-    the settings declared in pyproject.toml
-    """
-    logger.debug("CLI 'main' command invoked.")
-    asyncio.run(
-        _main(
-            folders=folders,
-            tests_folder=tests_folder,
-            coverage_file=coverage_file,
-            auto=auto,
-        )
-    )
+    """Legacy alias for generate_tests command."""
+    typer.echo("⚠️  'main' command is deprecated. Use 'generate-tests' instead.")
+
+    # Call the new command with same parameters
+    generate_tests(folders=folders, tests_folder=tests_folder, coverage_file=coverage_file, auto=auto, index_dir=None)
 
 
 @app.command()
 def index(
-    tests_folder: str | None = None,
-    auto: bool = False,
-    index_dir: str = ".ai_unit_test_cache/faiss_index",
+    tests_folder: str | None = typer.Option(None, "--tests-folder", "-t", help="Directory containing test files"),
+    auto: bool = typer.Option(False, "--auto", "-a", help="Auto-discover configuration from pyproject.toml"),
+    index_dir: str = typer.Option("data/faiss_index", "--index-dir", help="Directory to save the index"),
 ) -> None:
-    """
-    Indexes the test files for semantic search.
-    """
-    logger.info("Starting test indexing process.")
+    """Legacy alias for create_index command."""
+    typer.echo("⚠️  'index' command is deprecated. Use 'create-index' instead.")
 
-    if auto or not tests_folder:
-        logger.info("Auto-discovery enabled or tests_folder not provided. Loading from pyproject.toml.")
-        cfg: dict[str, Any] = load_pyproject_config()
-        _, tests_dir_from_cfg, _ = extract_from_pyproject(cfg)
+    # For backward compatibility, derive folders from tests_folder
+    if tests_folder:
+        folders = [tests_folder]
+    else:
+        # Use auto-discovery
+        try:
+            from ai_unit_test.services.configuration_service import ConfigurationService
 
-        if not tests_folder:
-            tests_folder = tests_dir_from_cfg
-            logger.debug(f"Using tests folder from pyproject.toml: {tests_folder}")
+            config_service = ConfigurationService()
+            config_data = config_service.load_pyproject_config()
+            source_folders, _, _ = config_service.extract_source_configuration(config_data)
+            folders = source_folders or ["src"]
+        except Exception:
+            folders = ["src"]
 
-    if not tests_folder:
-        logger.error("Tests folder not defined (--tests-folder) and not found in pyproject.toml.")
-        sys.exit(1)
-
-    logger.info(f"Using tests folder: {tests_folder}")
-
-    cfg = load_pyproject_config()
-    test_patterns = extract_test_patterns_from_pyproject(cfg)
-    test_files = find_all_test_files(tests_folder, test_patterns)
-
-    if not test_files:
-        logger.warning(f"No test files found in {tests_folder} with patterns {test_patterns}")
-        return
-
-    logger.info(f"Found {len(test_files)} test files to index.")
-    metadata_list = []
-    embeddings = []
-    for test_file in test_files:
-        logger.info(f"  - {test_file}")
-        chunks = chunk_test_file(str(test_file))
-        logger.info(f"  - Found {len(chunks)} chunks")
-
-        if not chunks:
-            logger.warning(f"No chunks found to file {test_file}.")
-            continue
-
-        for chunk in chunks:
-            metadata_list.append(
-                {
-                    "chunk_id": f"{test_file}:{chunk.start_line}-{chunk.end_line}",
-                    "source_filepath": str(test_file),
-                    "start_line": chunk.start_line,
-                    "end_line": chunk.end_line,
-                    "content_hash": chunk.content_hash,
-                    "text_preview": chunk.source_code[:250],
-                }
-            )
-
-        chunk_texts = [chunk.source_code for chunk in chunks]
-        embeddings.extend(generate_embeddings(chunk_texts, source_file_path=str(test_file)))
-
-    if not embeddings:
-        logger.warning("No embeddings generated.")
-        return
-
-    logger.info(f"Generated {len(embeddings)} embeddings.")
-
-    index_path = Path(index_dir)
-    index_path.mkdir(exist_ok=True, parents=True)
-    save_faiss_index(embeddings, metadata_list, str(index_path))
-    logger.info(f"Index saved to {index_path}")
+    create_index(folders=folders, index_dir=index_dir, force=False)
 
 
 @app.command()
 def search(
     query: str,
-    index_dir: str = ".ai_unit_test_cache/faiss_index",
-    k: int = 5,
-    threshold: float = 0.7,
+    index_dir: str = typer.Option("data/faiss_index", "--index-dir", help="Directory containing the search index"),
+    k: int = typer.Option(5, "--k", help="Number of results to return"),
+    threshold: float = typer.Option(0.7, "--threshold", help="Similarity threshold"),
 ) -> None:
-    """
-    Searches the index for a given query.
-    """
-    logger.info(f"Searching for query: '{query}'")
-    results = semantic_search(query, index_dir, k, threshold)
-    if not results:
-        logger.info("No results found.")
-        return
+    """Search for similar code in the index."""
 
-    logger.info(f"Found {len(results)} results:")
-    for i, (result_meta, distance) in enumerate(results):
-        logger.info(
-            f"  {i+1}. Similarity: {distance:.4f} | "
-            f"{result_meta['source_filepath']}:{result_meta['start_line']}-{result_meta['end_line']}"
-        )
-        logger.info(f"      Preview: {result_meta['text_preview'].strip()}")
+    try:
+        from ai_unit_test.semantic_search import search as semantic_search
+
+        typer.echo(f"🔍 Searching for: '{query}'")
+        results = semantic_search(query, index_dir, k, threshold)
+
+        if not results:
+            typer.echo("No results found.")
+            return
+
+        typer.echo(f"Found {len(results)} results:")
+        for i, (result_meta, distance) in enumerate(results):
+            typer.echo(
+                f"  {i+1}. Similarity: {distance:.4f} | "
+                f"{result_meta['source_filepath']}:{result_meta['start_line']}-{result_meta['end_line']}"
+            )
+            typer.echo(f"      Preview: {result_meta['text_preview'].strip()}")
+
+    except ImportError:
+        typer.echo("❌ Search functionality not available. Make sure FAISS is installed.")
+        raise typer.Exit(1)
+    except Exception as e:
+        typer.echo(f"❌ Search failed: {e}")
+        raise typer.Exit(1)
+
+
+if __name__ == "__main__":
+    app()

@@ -6,7 +6,8 @@ extend-select = B, ANN
 max-complexity = 10
 # E203: whitespace before ':' (conflita com Black)
 # W503: line break before binary operator (conflita com Black)
-extend-ignore = E203,W503
+# ANN101: missing-type-self - Modern type checkers, such as MyPy, are capable of inferring the type of self automatically. This makes explicit annotation of self redundant in most cases.
+extend-ignore = E203,W503,ANN101
 exclude =
     env,
     .venv,

@@ -148,9 +148,9 @@ def _register_default_organizers() -> None:
         pass
 
     try:
-        from ai_unit_test.core.implementations.indexing.memory_organizer import InMemoryIndexOrganizer
+        from ai_unit_test.core.implementations.indexing.memory_organizer import MemoryIndexOrganizer
 
-        IndexOrganizerFactory.register_organizer("memory", InMemoryIndexOrganizer)
+        IndexOrganizerFactory.register_organizer("memory", MemoryIndexOrganizer)
     except ImportError:
         pass
 

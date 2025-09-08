@@ -77,5 +77,3 @@ repos:
         require_serial: true
         additional_dependencies:
           ["typer", "openai", "coverage", "pytest", "faiss-cpu", "scikit-learn"]
-        env:
-          PYTHONPATH: src

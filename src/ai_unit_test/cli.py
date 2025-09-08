@@ -6,7 +6,7 @@ from typing import Any
 
 import typer
 
-from ai_unit_test.services.orchestration_service import OrchestrationService
+from ai_unit_test.services.orchestration_service import HealthStatus, OrchestrationService
 
 logger = logging.getLogger(__name__)
 app = typer.Typer()
@@ -115,9 +115,9 @@ def health_check() -> None:
 
         _display_health_check_results(results)
 
-        if results["status"] == "unhealthy":
+        if results.status == "unhealthy":
             raise typer.Exit(1)
-        elif results["status"] == "error":
+        elif results.status == "error":
             raise typer.Exit(2)
         else:
             typer.echo("✅ System is healthy!")
@@ -165,19 +165,18 @@ def _display_index_creation_results(results: dict[str, Any]) -> None:
         typer.echo(f"  Error: {results.get('error', 'Unknown error')}")
 
 
-def _display_health_check_results(results: dict[str, Any]) -> None:
+def _display_health_check_results(results: HealthStatus) -> None:
     """Display health check results."""
     typer.echo("\n🏥 Health Check Results:")
-    typer.echo(f"  Overall Status: {results['status']}")
+    typer.echo(f"  Overall Status: {results.status}")
 
-    checks = results.get("checks", {})
-    for check_name, check_result in checks.items():
-        status_icon = "✅" if check_result.get("healthy") else "❌"
-        status_text = "Healthy" if check_result.get("healthy") else "Unhealthy"
+    for check_name, check_result in vars(results.checks).items():
+        status_icon = "✅" if check_result.healthy else "❌"
+        status_text = "Healthy" if check_result.healthy else "Unhealthy"
         typer.echo(f"  {status_icon} {check_name.title()}: {status_text}")
 
-        if not check_result.get("healthy") and "error" in check_result:
-            typer.echo(f"      Error: {check_result['error']}")
+        if not check_result.healthy and hasattr(check_result, "error"):
+            typer.echo(f"      Error: {check_result.error}")
 
 
 if __name__ == "__main__":

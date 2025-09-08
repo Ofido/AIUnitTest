@@ -4,36 +4,42 @@ import asyncio
 import logging
 import time
 from collections.abc import AsyncGenerator
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any
 
 from ai_unit_test.core.exceptions import ConfigurationError, LLMConnectionError, LLMProviderError
 from ai_unit_test.core.interfaces.llm_connector import LLMConnector, LLMRequest, LLMResponse
 
 logger = logging.getLogger(__name__)
 
-# Optional dependency handling
-try:
+if TYPE_CHECKING:
     from openai import AsyncOpenAI
     from openai.types.chat import ChatCompletion
 
     OPENAI_AVAILABLE = True
-except ImportError:
-    OPENAI_AVAILABLE = False
-    AsyncOpenAI = None
-    ChatCompletion = None
+else:
+    # Optional dependency handling
+    try:
+        from openai import AsyncOpenAI
+        from openai.types.chat import ChatCompletion
+
+        OPENAI_AVAILABLE = True
+    except ImportError:
+        OPENAI_AVAILABLE = False
+        AsyncOpenAI = None
+        ChatCompletion = None
 
 
 class OpenAIConnector(LLMConnector):
     """OpenAI API connector implementation."""
+
+    client: AsyncOpenAI
+    _rate_limiter: "RateLimiter"
 
     def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config)
 
         if not OPENAI_AVAILABLE:
             raise ConfigurationError("OpenAI library is not available. Please install it with: pip install openai")
-
-        self.client = None
-        self._rate_limiter = None
 
     async def initialize(self) -> None:
         """Initialize OpenAI client and rate limiter."""
@@ -70,14 +76,17 @@ class OpenAIConnector(LLMConnector):
             response = await self._make_request_with_retry(request)
 
             response_time_ms = int((time.time() - start_time) * 1000)
-
-            return LLMResponse(
-                content=response.choices[0].message.content or "",
-                usage={
+            usage = {}
+            if response.usage is not None:
+                usage = {
                     "prompt_tokens": response.usage.prompt_tokens,
                     "completion_tokens": response.usage.completion_tokens,
                     "total_tokens": response.usage.total_tokens,
-                },
+                }
+
+            return LLMResponse(
+                content=response.choices[0].message.content or "",
+                usage=usage,
                 model=response.model,
                 finish_reason=response.choices[0].finish_reason,
                 response_time_ms=response_time_ms,
@@ -172,6 +181,7 @@ class OpenAIConnector(LLMConnector):
                 delay = base_delay * (2**attempt)
                 logger.warning(f"Request failed (attempt {attempt + 1}), retrying in {delay}s: {e}")
                 await asyncio.sleep(delay)
+        raise
 
 
 class RateLimiter:

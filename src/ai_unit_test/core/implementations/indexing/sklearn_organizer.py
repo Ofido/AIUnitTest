@@ -5,25 +5,32 @@ import logging
 import time
 import warnings
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from ai_unit_test.core.exceptions import ConfigurationError, IndexError, IndexNotFoundError
 from ai_unit_test.core.interfaces.index_organizer import IndexMetadata, IndexOrganizer, IndexStats, SearchResult
 
-try:
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=DeprecationWarning)
-        import joblib
-        from sklearn.metrics.pairwise import cosine_similarity
-        from sklearn.neighbors import NearestNeighbors
+if TYPE_CHECKING:
+    import joblib
+    from sklearn.metrics.pairwise import cosine_similarity  # type: ignore[import-untyped]
+    from sklearn.neighbors import NearestNeighbors  # type: ignore[import-untyped]
+
     SKLEARN_AVAILABLE = True
-except ImportError:
-    SKLEARN_AVAILABLE = False
-    NearestNeighbors = None
-    cosine_similarity = None
-    joblib = None
+else:
+    try:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+            import joblib
+            from sklearn.metrics.pairwise import cosine_similarity
+            from sklearn.neighbors import NearestNeighbors
+        SKLEARN_AVAILABLE = True
+    except ImportError:
+        SKLEARN_AVAILABLE = False
+        NearestNeighbors = None
+        cosine_similarity = None
+        joblib = None
 
 logger = logging.getLogger(__name__)
 
@@ -31,22 +38,29 @@ logger = logging.getLogger(__name__)
 class SklearnIndexOrganizer(IndexOrganizer):
     """Sklearn-based index organizer implementation."""
 
+    index_info: IndexMetadata
+    model: NearestNeighbors
+    embeddings: np.ndarray
+    metadata: list[dict[str, Any]]
+    _index_loaded: bool
+    _index_path: Path | None
+
     def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config)
 
         if not SKLEARN_AVAILABLE:
             raise ConfigurationError("Sklearn is not available. Please install scikit-learn")
 
-        self.model = None
-        self.embeddings = None
-        self.metadata = None
-        self.index_info = None
         self.algorithm = config.get("algorithm", "ball_tree")
         self.metric = config.get("metric", "cosine")
         self.n_jobs = config.get("n_jobs", -1)
 
     async def create_index(
-        self, embeddings: np.ndarray, metadata: list[dict[str, Any]], index_path: Path, model_name: str
+        self,
+        embeddings: np.ndarray,
+        metadata: list[dict[str, Any]],
+        index_path: Path,
+        model_name: str,
     ) -> IndexMetadata:
         """Create and save sklearn index."""
         try:
@@ -165,7 +179,7 @@ class SklearnIndexOrganizer(IndexOrganizer):
 
             # Process results
             results = []
-            for i, (score, idx) in enumerate(zip(scores, indices[0])):
+            for _, (score, idx) in enumerate(zip(scores, indices[0])):
                 if score >= threshold:
                     results.append(SearchResult(metadata=self.metadata[idx], score=float(score), document_id=str(idx)))
 
@@ -227,7 +241,8 @@ class SklearnIndexOrganizer(IndexOrganizer):
             if len(self.embeddings) > 0:
                 self.model.fit(self.embeddings)
             else:
-                self.model = None
+                # If no embeddings are left, set model to None but it can cause an error?
+                self.model = None  # pyright: ignore[reportAttributeAccessIssue]
 
             # Update info
             self.index_info.total_documents = len(self.metadata)

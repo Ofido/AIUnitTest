@@ -15,17 +15,19 @@ class LLMConnectorFactory:
     _connectors: dict[str, type["LLMConnector"]] = {}
 
     @classmethod
-    def register_connector(cls, name: str, connector_class: type["LLMConnector"]) -> None:
+    def register_connector(cls: type["LLMConnectorFactory"], name: str, connector_class: type["LLMConnector"]) -> None:
         """Register a new connector type."""
         cls._connectors[name.lower()] = connector_class
 
     @classmethod
-    def get_available_connectors(cls) -> list[str]:
+    def get_available_connectors(cls: type["LLMConnectorFactory"]) -> list[str]:
         """Get list of available connector names."""
         return list(cls._connectors.keys())
 
     @classmethod
-    def create_connector(cls, provider: str, config: dict[str, Any] | None = None) -> "LLMConnector":
+    def create_connector(
+        cls: type["LLMConnectorFactory"], provider: str, config: dict[str, Any] | None = None
+    ) -> "LLMConnector":
         """Create a connector instance."""
         if config is None:
             config = {}
@@ -46,7 +48,7 @@ class LLMConnectorFactory:
         return connector_class(merged_config)
 
     @classmethod
-    def create_from_config_file(cls, config: dict[str, Any]) -> "LLMConnector":
+    def create_from_config_file(cls: type["LLMConnectorFactory"], config: dict[str, Any]) -> "LLMConnector":
         """Create connector from pyproject.toml configuration."""
         llm_config = config.get("tool", {}).get("ai-unit-test", {}).get("llm", {})
 
@@ -63,7 +65,9 @@ class LLMConnectorFactory:
         return cls.create_connector(provider, merged_config)
 
     @classmethod
-    def _merge_environment_config(cls, provider: str, config: dict[str, Any]) -> dict[str, Any]:
+    def _merge_environment_config(
+        cls: type["LLMConnectorFactory"], provider: str, config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Merge configuration with environment variables."""
         merged = config.copy()
 
@@ -85,7 +89,7 @@ class LLMConnectorFactory:
         return merged
 
     @classmethod
-    def _validate_config(cls, provider: str, config: dict[str, Any]) -> None:
+    def _validate_config(cls: type["LLMConnectorFactory"], provider: str, config: dict[str, Any]) -> None:
         """Validate provider-specific configuration."""
         required_configs = {
             "openai": ["api_key"],

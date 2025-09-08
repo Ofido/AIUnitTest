@@ -5,21 +5,32 @@ import logging
 import time
 import warnings
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from ai_unit_test.core.exceptions import ConfigurationError, IndexError, IndexNotFoundError
 from ai_unit_test.core.interfaces.index_organizer import IndexMetadata, IndexOrganizer, IndexStats, SearchResult
 
-try:
+if TYPE_CHECKING:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         import faiss
+        from faiss.swigfaiss import IndexFlatIP, IndexFlatL2, IndexIVFFlat  # type: ignore[import-untyped]
     FAISS_AVAILABLE = True
-except ImportError:
-    FAISS_AVAILABLE = False
-    faiss = None
+else:
+    try:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+            import faiss
+            from faiss.swigfaiss import IndexFlatIP, IndexFlatL2, IndexIVFFlat
+        FAISS_AVAILABLE = True
+    except ImportError:
+        FAISS_AVAILABLE = False
+        # Create a mock that satisfies the type checker
+        from unittest.mock import MagicMock
+
+        faiss = MagicMock()
 
 logger = logging.getLogger(__name__)
 
@@ -27,15 +38,16 @@ logger = logging.getLogger(__name__)
 class FaissIndexOrganizer(IndexOrganizer):
     """FAISS-based index organizer implementation."""
 
+    index: IndexFlatIP | IndexFlatL2 | IndexIVFFlat
+    metadata: list[dict[str, Any]]
+    index_info: IndexMetadata
+
     def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config)
 
         if not FAISS_AVAILABLE:
             raise ConfigurationError("FAISS is not available. Please install faiss-cpu or faiss-gpu")
 
-        self.index = None
-        self.metadata = None
-        self.index_info = None
         self.index_type = config.get("index_type", "IndexFlatIP")
         self.normalize_embeddings = config.get("normalize_embeddings", True)
 
@@ -56,7 +68,7 @@ class FaissIndexOrganizer(IndexOrganizer):
             self.index = self._create_faiss_index(dimension)
 
             # Add embeddings
-            self.index.add(embeddings)
+            self.index.add(embeddings)  # pyright: ignore[reportCallIssue]
 
             # Prepare metadata
             self.metadata = metadata
@@ -148,11 +160,11 @@ class FaissIndexOrganizer(IndexOrganizer):
                 )
 
             # Search
-            scores, indices = self.index.search(query_embedding, k)
+            scores, indices = self.index.search(query_embedding, k)  # pyright: ignore[reportCallIssue]
 
             # Process results
             results = []
-            for i, (score, idx) in enumerate(zip(scores[0], indices[0])):
+            for score, idx in zip(scores[0], indices[0]):
                 if idx != -1 and score >= threshold:
                     results.append(SearchResult(metadata=self.metadata[idx], score=float(score), document_id=str(idx)))
 
@@ -173,7 +185,7 @@ class FaissIndexOrganizer(IndexOrganizer):
                 faiss.normalize_L2(embeddings)
 
             # Add to index
-            self.index.add(embeddings)
+            self.index.add(embeddings)  # pyright: ignore[reportCallIssue]
 
             # Add to metadata
             self.metadata.extend(metadata)
@@ -250,16 +262,16 @@ class FaissIndexOrganizer(IndexOrganizer):
         else:
             logger.info("Index optimization not implemented for this index type")
 
-    def _create_faiss_index(self, dimension: int):
+    def _create_faiss_index(self, dimension: int) -> IndexFlatIP | IndexFlatL2 | IndexIVFFlat:
         """Create FAISS index based on configuration."""
         if self.index_type == "IndexFlatIP":
-            return faiss.IndexFlatIP(dimension)
+            return IndexFlatIP(dimension)
         elif self.index_type == "IndexFlatL2":
-            return faiss.IndexFlatL2(dimension)
+            return IndexFlatL2(dimension)
         elif self.index_type == "IndexIVFFlat":
-            quantizer = faiss.IndexFlatIP(dimension)
+            quantizer = IndexFlatIP(dimension)
             nlist = self.config.get("nlist", 100)
-            return faiss.IndexIVFFlat(quantizer, dimension, nlist)
+            return IndexIVFFlat(quantizer, dimension, nlist)
         else:
             raise ConfigurationError(f"Unsupported index type: {self.index_type}")
 
@@ -307,4 +319,4 @@ class FaissIndexOrganizer(IndexOrganizer):
         base_size = self.index.ntotal * self.index.d * 4  # float32 = 4 bytes
         metadata_size = len(str(self.metadata).encode("utf-8"))
 
-        return (base_size + metadata_size) / (1024 * 1024)
+        return (base_size + metadata_size) / (1024 * 1024)  # type: ignore[no-any-return]

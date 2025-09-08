@@ -58,7 +58,7 @@ class MockConnector(LLMConnector):
 
         for word in words:
             yield word + " "
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(self.response_delay / len(words))
 
     async def health_check(self) -> bool:
         """Mock health check."""

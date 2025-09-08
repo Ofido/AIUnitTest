@@ -7,15 +7,29 @@ from coverage import Coverage
 logger = logging.getLogger(__name__)
 
 
-def collect_missing_lines(data_file: str) -> dict[Path, list[int]]:
-    """Returns a mapping {file: [lines without coverage]} using the .coverage file."""
+def collect_missing_lines(data_file: str, source_folders: list[str] | None = None) -> dict[Path, list[int]]:
+    """Returns a mapping {file: [lines without coverage]} using the .coverage file.
+
+    Args:
+        data_file: Path to the .coverage file
+        source_folders: Optional list of source directories to filter results
+    """
     logger.debug(f"Collecting missing lines from {data_file}")
     cov = Coverage(data_file=data_file)
     cov.load()
     missing: dict[Path, list[int]] = {}
     measured_files = cov.get_data().measured_files()
     logger.debug(f"Measured files by coverage: {measured_files}")
+
     for file_path_str in measured_files:
+        file_path = Path(file_path_str)
+
+        # Filter by source folders if provided
+        if source_folders:
+            is_in_source = any(file_path.is_relative_to(Path(folder).resolve()) for folder in source_folders)
+            if not is_in_source:
+                continue
+
         logger.debug(f"Processing measured file: {file_path_str}")
         # The method analysis2 is marked as private by the library, but it is the best way to get the missing lines.
         # The official API does not provide a direct way to get the missing lines for a specific file.
@@ -24,7 +38,7 @@ def collect_missing_lines(data_file: str) -> dict[Path, list[int]]:
         logger.debug(f"Analysis for {file_path_str}: missing_lines={missing_lines}")
         if missing_lines:
             logger.debug(f"Found {len(missing_lines)} missing lines in {file_path_str}")
-            missing[Path(file_path_str)] = missing_lines
+            missing[file_path] = missing_lines
         else:
             logger.debug(f"No missing lines found in {file_path_str}")
     logger.info(f"Found {len(missing)} files with missing lines")

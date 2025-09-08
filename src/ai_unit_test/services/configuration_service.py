@@ -3,6 +3,7 @@
 import logging
 import sys
 import tomllib
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -12,12 +13,26 @@ from ai_unit_test.services.base_service import BaseService
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class EnvironmentStatus:
+    python_version: str
+    working_directory: str
+    pyproject_exists: bool
+    tests_directory_exists: bool
+    coverage_file_exists: bool
+    environment_variables: dict[str, bool]
+
+
 class ConfigurationService(BaseService):
     """Service for managing application configuration."""
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         super().__init__(config)
         self._pyproject_cache: dict[str, Any] | None = None
+
+    def get_service_name(self) -> str:
+        """Return the name of this service for logging purposes."""
+        return "Configuration"
 
     def load_pyproject_config(self, pyproject_path: Path | None = None) -> dict[str, Any]:
         """Load and cache pyproject.toml configuration."""
@@ -52,7 +67,7 @@ class ConfigurationService(BaseService):
         self.logger.debug("Extracting source configuration from pyproject.toml")
 
         # Extract source folders
-        folders = pyproject_data.get("tool", {}).get("coverage", {}).get("run", {}).get("source", [])
+        folders: list[str] = pyproject_data.get("tool", {}).get("coverage", {}).get("run", {}).get("source", [])
         self.logger.debug(f"Found source folders: {folders}")
 
         # Extract tests folder
@@ -78,7 +93,7 @@ class ConfigurationService(BaseService):
         if pyproject_data is None:
             pyproject_data = self.load_pyproject_config()
 
-        patterns = (
+        patterns: list[str] = (
             pyproject_data.get("tool", {}).get("ai-unit-test", {}).get("test-patterns", ["test_*.py", "*_test.py"])
         )
 
@@ -103,7 +118,7 @@ class ConfigurationService(BaseService):
                 folders = cfg_folders
                 self.logger.debug(f"Using source folders from config: {folders}")
 
-            if not tests_folder:
+            if not tests_folder and cfg_tests:
                 tests_folder = cfg_tests
                 self.logger.debug(f"Using tests folder from config: {tests_folder}")
 
@@ -139,31 +154,36 @@ class ConfigurationService(BaseService):
         if pyproject_data is None:
             pyproject_data = self.load_pyproject_config()
 
-        return pyproject_data.get("tool", {}).get("ai-unit-test", {}).get("llm", {})
+        result: dict[str, Any] = pyproject_data.get("tool", {}).get("ai-unit-test", {}).get("llm", {})
+        return result
 
     def get_indexing_config(self, pyproject_data: dict[str, Any] | None = None) -> dict[str, Any]:
         """Get indexing configuration from pyproject.toml."""
         if pyproject_data is None:
             pyproject_data = self.load_pyproject_config()
 
-        return pyproject_data.get("tool", {}).get("ai-unit-test", {}).get("indexing", {})
+        result: dict[str, Any] = pyproject_data.get("tool", {}).get("ai-unit-test", {}).get("indexing", {})
+        return result
 
-    def validate_environment(self) -> dict[str, Any]:
+    def validate_environment(self) -> EnvironmentStatus:
         """Validate environment and return status information."""
-        status = {
-            "python_version": sys.version,
-            "working_directory": str(Path.cwd()),
-            "pyproject_exists": Path("pyproject.toml").exists(),
-            "tests_directory_exists": Path("tests").exists(),
-            "coverage_file_exists": Path(".coverage").exists(),
-            "environment_variables": {},
-        }
+        status = EnvironmentStatus(
+            python_version=sys.version,
+            working_directory=str(Path.cwd()),
+            pyproject_exists=Path("pyproject.toml").exists(),
+            tests_directory_exists=Path("tests").exists(),
+            coverage_file_exists=Path(".coverage").exists(),
+            environment_variables={},
+        )
 
         # Check important environment variables
         import os
 
         env_vars = ["OPENAI_API_KEY", "HF_API_KEY", "OPENAI_API_URL"]
+        env_status: dict[str, bool] = {}
         for var in env_vars:
-            status["environment_variables"][var] = var in os.environ
+            env_status[var] = var in os.environ
+
+        status.environment_variables = env_status
 
         return status

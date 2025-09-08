@@ -57,7 +57,7 @@ class LLMConnector(ABC):
         pass
 
     @abstractmethod
-    async def generate_stream(self, request: LLMRequest) -> AsyncGenerator[str]:
+    def generate_stream(self, request: LLMRequest) -> AsyncGenerator[str]:
         """Generate streaming response from the LLM."""
         pass
 

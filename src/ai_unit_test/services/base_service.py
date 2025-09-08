@@ -1,7 +1,7 @@
 """Base service class for common functionality."""
 
 import logging
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Any
 
 
@@ -18,3 +18,8 @@ class BaseService(ABC):
         missing_keys = [key for key in required_keys if key not in self.config]
         if missing_keys:
             raise ValueError(f"Missing required configuration keys: {missing_keys}")
+
+    @abstractmethod
+    def get_service_name(self) -> str:
+        """Return the name of this service for logging purposes."""
+        pass

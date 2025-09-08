@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ai_unit_test.core.exceptions import ConfigurationError, LLMConnectionError, LLMProviderError
 from ai_unit_test.core.interfaces.llm_connector import LLMConnector, LLMRequest, LLMResponse
@@ -12,33 +12,46 @@ from ai_unit_test.core.interfaces.llm_connector import LLMConnector, LLMRequest,
 logger = logging.getLogger(__name__)
 
 # Optional dependency handling
-try:
+if TYPE_CHECKING:
     import httpx
 
     HTTPX_AVAILABLE = True
-except ImportError:
-    HTTPX_AVAILABLE = False
-    httpx = None
+else:
+    try:
+        import httpx
 
-try:
-    from transformers import AutoTokenizer, pipeline
+        HTTPX_AVAILABLE = True
+    except ImportError:
+        HTTPX_AVAILABLE = False
+        httpx = None
+
+if TYPE_CHECKING:
+    from transformers import AutoTokenizer, PreTrainedTokenizerBase, TextGenerationPipeline, pipeline
 
     TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    TRANSFORMERS_AVAILABLE = False
-    pipeline = None
-    AutoTokenizer = None
+else:
+    try:
+        from transformers import AutoTokenizer, PreTrainedTokenizerBase, TextGenerationPipeline, pipeline
+
+        TRANSFORMERS_AVAILABLE = True
+    except ImportError:
+        TRANSFORMERS_AVAILABLE = False
+        pipeline = None
+        AutoTokenizer = None
+        PreTrainedTokenizerBase = None
+        TextGenerationPipeline = None
 
 
 class HuggingFaceConnector(LLMConnector):
     """HuggingFace connector supporting both local and API models."""
 
+    api_client: httpx.AsyncClient
+    pipeline: TextGenerationPipeline
+    tokenizer: PreTrainedTokenizerBase
+
     def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config)
         self.model = None
-        self.tokenizer = None
-        self.pipeline = None
-        self.api_client = None
         self.use_api = config.get("use_api", False)
 
     async def initialize(self) -> None:
@@ -92,7 +105,8 @@ class HuggingFaceConnector(LLMConnector):
             )
 
             self.tokenizer = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: AutoTokenizer.from_pretrained(model_name)
+                None,
+                lambda: AutoTokenizer.from_pretrained(model_name),  # type: ignore[no-untyped-call]  # nosec
             )
 
         except Exception as e:
@@ -146,7 +160,7 @@ class HuggingFaceConnector(LLMConnector):
 
         result = response.json()
         if isinstance(result, list) and len(result) > 0:
-            return result[0].get("generated_text", "")
+            return result[0].get("generated_text", "")  # type: ignore
 
         return ""
 
@@ -172,7 +186,7 @@ class HuggingFaceConnector(LLMConnector):
         if result and len(result) > 0:
             generated_text = result[0]["generated_text"]
             # Extract only the new generated part
-            return generated_text[len(prompt) :].strip()
+            return generated_text[len(prompt) :].strip()  # type: ignore[no-any-return]
 
         return ""
 
@@ -181,7 +195,7 @@ class HuggingFaceConnector(LLMConnector):
         # For simplicity, generate full response and yield in chunks
         response = await self.generate_response(request)
 
-        words = response.split()
+        words = response.split()  # type: ignore
         for word in words:
             yield word + " "
             await asyncio.sleep(0.05)  # Simulate streaming delay

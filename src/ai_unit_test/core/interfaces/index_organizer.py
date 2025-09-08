@@ -45,6 +45,9 @@ class IndexStats:
 class IndexOrganizer(ABC):
     """Abstract base class for all index organizers."""
 
+    _index_loaded: bool
+    _index_path: Path | None
+
     def __init__(self, config: dict[str, Any]) -> None:
         """Initialize organizer with configuration."""
         self.config = config

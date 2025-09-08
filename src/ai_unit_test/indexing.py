@@ -85,7 +85,7 @@ def save_faiss_index(
         faiss.write_index(index, os.path.join(index_dir, index_filename))
     else:
         import joblib
-        from sklearn.neighbors import NearestNeighbors
+        from sklearn.neighbors import NearestNeighbors  # type: ignore[import-untyped]
 
         index = NearestNeighbors(n_neighbors=5, metric="cosine")
         index.fit(embeddings_np)

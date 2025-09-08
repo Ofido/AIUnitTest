@@ -19,9 +19,9 @@ class MemoryIndexOrganizer(IndexOrganizer):
     def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config)
 
-        self.embeddings = None
-        self.metadata = None
-        self.index_info = None
+        self.embeddings: np.ndarray = np.empty((0, 0))  # Initialize with empty array
+        self.metadata: list[dict[str, Any]] = []  # Initialize with empty list
+        self.index_info: IndexMetadata | None = None
         self.use_cosine_similarity = config.get("use_cosine_similarity", True)
 
     async def create_index(
@@ -66,7 +66,7 @@ class MemoryIndexOrganizer(IndexOrganizer):
         """Load index (no-op for memory organizer)."""
         # Memory organizer doesn't persist data
         # This method exists for interface compatibility
-        if not self._index_loaded:
+        if not self._index_loaded or self.index_info is None:
             raise IndexError("No index in memory to load")
 
         logger.info("Memory index is already loaded")
@@ -121,8 +121,8 @@ class MemoryIndexOrganizer(IndexOrganizer):
             raise IndexError(f"Search failed: {e}")
 
     async def add_documents(self, embeddings: np.ndarray, metadata: list[dict[str, Any]]) -> None:
-        """Add documents to in-memory index."""
-        if not self._index_loaded:
+        """Add new documents to the memory index."""
+        if not self._index_loaded or self.index_info is None:
             raise IndexError("No index loaded")
 
         try:
@@ -145,13 +145,13 @@ class MemoryIndexOrganizer(IndexOrganizer):
             raise IndexError(f"Document addition failed: {e}")
 
     async def remove_documents(self, document_ids: list[str]) -> None:
-        """Remove documents from in-memory index."""
-        if not self._index_loaded:
+        """Remove documents from memory index by document IDs."""
+        if not self._index_loaded or self.index_info is None:
             raise IndexError("No index loaded")
 
         try:
             # Convert document IDs to indices
-            indices_to_remove = [int(doc_id) for doc_id in document_ids]
+            indices_to_remove = [int(doc_id) for doc_id in document_ids if doc_id.isdigit()]
 
             # Create mask for documents to keep
             mask = np.ones(len(self.metadata), dtype=bool)
@@ -173,7 +173,7 @@ class MemoryIndexOrganizer(IndexOrganizer):
 
     async def update_document(self, document_id: str, embedding: np.ndarray, metadata: dict[str, Any]) -> None:
         """Update document in in-memory index."""
-        if not self._index_loaded:
+        if not self._index_loaded or self.index_info is None:
             raise IndexError("No index loaded")
 
         try:
@@ -231,8 +231,8 @@ class MemoryIndexOrganizer(IndexOrganizer):
 
     def clear_index(self) -> None:
         """Clear the in-memory index."""
-        self.embeddings = None
-        self.metadata = None
+        self.embeddings = np.empty((0, 0))
+        self.metadata = []
         self.index_info = None
         self._index_loaded = False
         logger.info("Memory index cleared")
@@ -265,11 +265,12 @@ class MemoryIndexOrganizer(IndexOrganizer):
         norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
         # Avoid division by zero
         norms[norms == 0] = 1
-        return embeddings / norms
+        result: np.ndarray = embeddings / norms
+        return result
 
     def _estimate_memory_usage(self) -> float:
         """Estimate memory usage in MB."""
-        if self.embeddings is None:
+        if len(self.embeddings) == 0:
             return 0.0
 
         # Calculate actual memory usage

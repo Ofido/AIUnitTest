@@ -8,6 +8,6 @@ and the core functionality.
 from .base_service import BaseService
 from .configuration_service import ConfigurationService
 from .orchestration_service import OrchestrationService
-from .test_processing_service import TestProcessingService
+from .processing_service import TestProcessingService
 
 __all__ = ["BaseService", "ConfigurationService", "TestProcessingService", "OrchestrationService"]

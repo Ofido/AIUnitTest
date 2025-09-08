@@ -15,12 +15,14 @@ class IndexOrganizerFactory:
     _availability_cache: dict[str, bool] = {}
 
     @classmethod
-    def register_organizer(cls, name: str, organizer_class: type["IndexOrganizer"]) -> None:
+    def register_organizer(
+        cls: type["IndexOrganizerFactory"], name: str, organizer_class: type["IndexOrganizer"]
+    ) -> None:
         """Register a new organizer type."""
         cls._organizers[name.lower()] = organizer_class
 
     @classmethod
-    def get_available_organizers(cls) -> list[str]:
+    def get_available_organizers(cls: type["IndexOrganizerFactory"]) -> list[str]:
         """Get list of available organizer names."""
         available = []
         for name, organizer_class in cls._organizers.items():
@@ -29,7 +31,9 @@ class IndexOrganizerFactory:
         return available
 
     @classmethod
-    def create_organizer(cls, backend: str | None = None, config: dict[str, Any] = None) -> "IndexOrganizer":
+    def create_organizer(
+        cls: type["IndexOrganizerFactory"], backend: str | None = None, config: dict[str, Any] | None = None
+    ) -> "IndexOrganizer":
         """Create an organizer instance."""
         if config is None:
             config = {}
@@ -58,7 +62,7 @@ class IndexOrganizerFactory:
         return organizer_class(merged_config)
 
     @classmethod
-    def create_from_config_file(cls, config: dict[str, Any]) -> "IndexOrganizer":
+    def create_from_config_file(cls: type["IndexOrganizerFactory"], config: dict[str, Any]) -> "IndexOrganizer":
         """Create organizer from pyproject.toml configuration."""
         indexing_config = config.get("tool", {}).get("ai-unit-test", {}).get("indexing", {})
 
@@ -74,7 +78,7 @@ class IndexOrganizerFactory:
         return cls.create_organizer(backend, merged_config)
 
     @classmethod
-    def _auto_detect_backend(cls) -> str:
+    def _auto_detect_backend(cls: type["IndexOrganizerFactory"]) -> str:
         """Auto-detect the best available backend."""
         # Priority order: faiss (fastest) -> sklearn (fallback) -> memory (testing)
         priority_order = ["faiss", "sklearn", "memory"]
@@ -88,7 +92,9 @@ class IndexOrganizerFactory:
         raise ConfigurationError("No index backends available. Please install faiss-cpu or scikit-learn.")
 
     @classmethod
-    def _check_availability(cls, name: str, organizer_class: type["IndexOrganizer"]) -> bool:
+    def _check_availability(
+        cls: type["IndexOrganizerFactory"], name: str, organizer_class: type["IndexOrganizer"]
+    ) -> bool:
         """Check if an organizer backend is available."""
         if name in cls._availability_cache:
             return cls._availability_cache[name]
@@ -96,12 +102,12 @@ class IndexOrganizerFactory:
         try:
             # Try to import required dependencies for this backend
             if name == "faiss":
-                import faiss
+                import faiss  # noqa: F401
 
                 available = True
             elif name == "sklearn":
-                import joblib
-                import sklearn.neighbors
+                import joblib  # noqa: F401
+                import sklearn.neighbors  # type: ignore[import-untyped] # noqa: F401
 
                 available = True
             elif name == "memory":
@@ -118,15 +124,17 @@ class IndexOrganizerFactory:
         return available
 
     @classmethod
-    def _merge_default_config(cls, backend: str, config: dict[str, Any]) -> dict[str, Any]:
+    def _merge_default_config(
+        cls: type["IndexOrganizerFactory"], backend: str, config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Merge configuration with backend-specific defaults."""
-        defaults = {
+        defaults: dict[str, dict[str, Any]] = {
             "faiss": {"index_type": "IndexFlatIP", "normalize_embeddings": True, "nlist": 100},  # for IVF indices
             "sklearn": {"algorithm": "ball_tree", "metric": "cosine", "n_neighbors": 10, "n_jobs": -1},
             "memory": {"max_documents": 10000, "enable_persistence": False},
         }
 
-        backend_defaults = defaults.get(backend, {})
+        backend_defaults: dict[str, Any] = defaults.get(backend, {})
         return {**backend_defaults, **config}
 
 

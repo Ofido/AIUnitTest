@@ -2,13 +2,54 @@
 
 import asyncio
 import logging
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from ai_unit_test.services.base_service import BaseService
-from ai_unit_test.services.configuration_service import ConfigurationService
-from ai_unit_test.services.test_processing_service import TestProcessingService
+from ai_unit_test.services.configuration_service import ConfigurationService, EnvironmentStatus
+from ai_unit_test.services.processing_service import TestProcessingService
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ConfigHealth:
+    healthy: bool
+    pyproject_loaded: bool = False
+    environment: EnvironmentStatus | None = None
+    error: str | None = None
+    timestamp: float | None = None
+
+
+@dataclass
+class LlmHealth:
+    healthy: bool
+    timestamp: float | None = None
+    connector_info: dict[str, Any] | None = None
+    error: str | None = None
+
+
+@dataclass
+class IndexHealth:
+    healthy: bool
+    available_backends: list[str] | None = None
+    error: str | None = None
+
+
+@dataclass
+class HealthStatusChecks:
+    config: ConfigHealth | None = None
+    llm: LlmHealth | None = None
+    indexing: IndexHealth | None = None
+
+
+@dataclass
+class HealthStatus:
+    status: str
+    timestamp: float
+    checks: HealthStatusChecks = HealthStatusChecks()
+    error: str | None = None
+    failed_checks: list[str] = []
 
 
 class OrchestrationService(BaseService):
@@ -18,6 +59,10 @@ class OrchestrationService(BaseService):
         super().__init__(config)
         self.config_service = ConfigurationService(config)
         self.test_service = None
+
+    def get_service_name(self) -> str:
+        """Return the name of this service for logging purposes."""
+        return "Orchestration"
 
     async def run_test_generation_workflow(
         self,
@@ -49,12 +94,14 @@ class OrchestrationService(BaseService):
 
             async with TestProcessingService(test_config) as test_service:
                 # Step 4: Process missing coverage
-                results = await test_service.process_missing_coverage(
+                coverage_result = await test_service.process_missing_coverage(
                     resolved_folders, resolved_tests_folder, resolved_coverage
                 )
 
             # Step 5: Add workflow metadata
             workflow_end_time = asyncio.get_event_loop().time()
+
+            results = asdict(coverage_result)
             results.update(
                 {
                     "workflow_duration_seconds": workflow_end_time - workflow_start_time,
@@ -97,49 +144,56 @@ class OrchestrationService(BaseService):
             self.logger.error(f"Index creation workflow failed: {e}")
             return {"status": "error", "error": str(e)}
 
-    async def run_health_check_workflow(self) -> dict[str, Any]:
+    async def run_health_check_workflow(self) -> HealthStatus:
         """Run comprehensive system health check."""
 
         self.logger.info("Running health check workflow")
 
-        health_status = {"status": "healthy", "checks": {}, "timestamp": asyncio.get_event_loop().time()}
+        health_status: HealthStatus = HealthStatus(
+            status="healthy",
+            timestamp=asyncio.get_event_loop().time(),
+        )
 
         try:
             # Check configuration
-            health_status["checks"]["configuration"] = await self._check_configuration_health()
+            health_status.checks.config = await self._check_configuration_health()
 
             # Check LLM connectivity
-            health_status["checks"]["llm"] = await self._check_llm_health()
+            health_status.checks.llm = await self._check_llm_health()
 
             # Check index availability
-            health_status["checks"]["indexing"] = await self._check_indexing_health()
+            health_status.checks.indexing = await self._check_indexing_health()
 
             # Determine overall status
-            failed_checks = [name for name, check in health_status["checks"].items() if not check.get("healthy", False)]
+            failed_checks = [
+                name
+                for name, check in vars(health_status.checks).items()
+                if check is not None and hasattr(check, "healthy") and not check.healthy
+            ]
 
             if failed_checks:
-                health_status["status"] = "unhealthy"
-                health_status["failed_checks"] = failed_checks
+                health_status.status = "unhealthy"
+                health_status.failed_checks = failed_checks
 
             return health_status
 
         except Exception as e:
             self.logger.error(f"Health check failed: {e}")
-            health_status["status"] = "error"
-            health_status["error"] = str(e)
+            health_status.status = "error"
+            health_status.error = str(e)
             return health_status
 
-    async def _check_configuration_health(self) -> dict[str, Any]:
+    async def _check_configuration_health(self) -> ConfigHealth:
         """Check configuration health."""
         try:
             config = self.config_service.load_pyproject_config()
             env_status = self.config_service.validate_environment()
 
-            return {"healthy": True, "pyproject_loaded": bool(config), "environment": env_status}
+            return ConfigHealth(healthy=True, pyproject_loaded=bool(config), environment=env_status)
         except Exception as e:
-            return {"healthy": False, "error": str(e)}
+            return ConfigHealth(healthy=False, error=str(e), timestamp=asyncio.get_event_loop().time())
 
-    async def _check_llm_health(self) -> dict[str, Any]:
+    async def _check_llm_health(self) -> LlmHealth:
         """Check LLM connector health."""
         try:
             from ai_unit_test.core.factories.llm_factory import LLMConnectorFactory
@@ -151,19 +205,19 @@ class OrchestrationService(BaseService):
                 healthy = await connector.health_check()
                 info = connector.get_connector_info()
 
-                return {"healthy": healthy, "connector_info": info}
+                return LlmHealth(healthy=healthy, connector_info=info)
 
         except Exception as e:
-            return {"healthy": False, "error": str(e)}
+            return LlmHealth(healthy=False, error=str(e))
 
-    async def _check_indexing_health(self) -> dict[str, Any]:
+    async def _check_indexing_health(self) -> IndexHealth:
         """Check index organizer health."""
         try:
             from ai_unit_test.core.factories.index_factory import IndexOrganizerFactory
 
             available_backends = IndexOrganizerFactory.get_available_organizers()
 
-            return {"healthy": len(available_backends) > 0, "available_backends": available_backends}
+            return IndexHealth(healthy=len(available_backends) > 0, available_backends=available_backends)
 
         except Exception as e:
-            return {"healthy": False, "error": str(e)}
+            return IndexHealth(healthy=False, error=str(e))

@@ -6,12 +6,13 @@ import signal
 import sys
 import traceback
 from pathlib import Path
+from types import FrameType, TracebackType
 from typing import NoReturn
 
 import typer
 
 from ai_unit_test.cli import app
-from ai_unit_test.core.exceptions import AIUnitTestError
+from ai_unit_test.core.exceptions import AIUnitTestError, ConfigurationError
 
 # Global state for graceful shutdown
 shutdown_event = asyncio.Event()
@@ -21,8 +22,8 @@ class SystemOrchestrator:
     """System orchestrator for managing application lifecycle."""
 
     def __init__(self) -> None:
-        self.logger = None
-        self.log_handlers = []
+        self.logger: logging.Logger | None = None
+        self.log_handlers: list[logging.Handler] = []
 
     def setup_comprehensive_logging(self, verbose: bool, log_file: Path | None = None) -> None:
         """Configure comprehensive logging system."""
@@ -94,7 +95,7 @@ class SystemOrchestrator:
     def setup_signal_handlers(self) -> None:
         """Setup signal handlers for graceful shutdown."""
 
-        def signal_handler(signum, frame):
+        def signal_handler(signum: int, frame: FrameType | None) -> None:
             signal_name = signal.Signals(signum).name
             if self.logger:
                 self.logger.info(f"Received {signal_name}, initiating graceful shutdown...")
@@ -119,21 +120,20 @@ class SystemOrchestrator:
         if self.logger:
             self.logger.debug("Signal handlers registered")
 
-    def global_exception_handler(self, exc_type, exc_value, exc_traceback) -> NoReturn:
+    def global_exception_handler(
+        self, exc_type: type[BaseException], exc_value: BaseException, exc_traceback: TracebackType | None
+    ) -> NoReturn:
         """Handle all unhandled exceptions with appropriate logging and user messages."""
 
         # Don't handle KeyboardInterrupt
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
-            return
+            sys.exit(130)  # Standard exit code for SIGINT
 
         # Format exception info
         exception_str = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
 
         if self.logger:
-            # Import here to avoid circular imports
-            from ai_unit_test.core.exceptions import ConfigurationError
-
             if issubclass(exc_type, ConfigurationError):
                 # Configuration error - provide helpful user message
                 self.logger.error(f"Configuration error: {exc_value}")
@@ -149,7 +149,7 @@ class SystemOrchestrator:
                 # Unexpected error - full logging
                 self.logger.critical(f"Unhandled exception: {exc_value}")
                 self.logger.critical(f"Traceback:\n{exception_str}")
-                print(f"❌ Unexpected error occurred. Check logs for details.", file=sys.stderr)
+                print("❌ Unexpected error occurred. Check logs for details.", file=sys.stderr)
                 print(f"Error: {exc_value}", file=sys.stderr)
         else:
             # Fallback when logging isn't initialized
@@ -169,9 +169,9 @@ class SystemOrchestrator:
 
         # Check critical dependencies
         try:
-            import numpy
-            import openai
-            import typer
+            import numpy  # noqa: F401
+            import openai  # noqa: F401
+            import typer  # noqa: F401
         except ImportError as e:
             raise RuntimeError(f"Critical dependency missing: {e}")
 
@@ -205,14 +205,17 @@ class SystemOrchestrator:
 # Global orchestrator instance
 orchestrator = SystemOrchestrator()
 
+# Define typer options to avoid B008 warnings
+VERBOSE_OPTION = typer.Option(False, "--verbose", "-v", help="Enable verbose logging")
+LOG_FILE_OPTION = typer.Option(None, "--log-file", help="Path to log file")
+CONFIG_FILE_OPTION = typer.Option(None, "--config", help="Path to configuration file (default: pyproject.toml)")
+
 
 @app.callback()
 def main(
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
-    log_file: Path | None = typer.Option(None, "--log-file", help="Path to log file"),
-    config_file: Path | None = typer.Option(
-        None, "--config", help="Path to configuration file (default: pyproject.toml)"
-    ),
+    verbose: bool = VERBOSE_OPTION,
+    log_file: Path | None = LOG_FILE_OPTION,
+    config_file: Path | None = CONFIG_FILE_OPTION,
 ) -> None:
     """
     AI Unit Test - Generate comprehensive unit tests using AI

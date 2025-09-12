@@ -1,15 +1,28 @@
 """Orchestration service for coordinating complex workflows."""
 
+import ast
 import asyncio
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Any
 
+from ai_unit_test.core.factories.index_factory import IndexOrganizerFactory
+from ai_unit_test.core.factories.llm_factory import LLMConnectorFactory
+from ai_unit_test.core.interfaces.llm_connector import EmbeddingRequest
 from ai_unit_test.services.base_service import BaseService
 from ai_unit_test.services.configuration_service import ConfigurationService, EnvironmentStatus
 from ai_unit_test.services.processing_service import TestProcessingService
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class Chunk:
+    file_path: str
+    start_line: int
+    end_line: int
+    content: str
 
 
 @dataclass
@@ -47,9 +60,9 @@ class HealthStatusChecks:
 class HealthStatus:
     status: str
     timestamp: float
-    checks: HealthStatusChecks = HealthStatusChecks()
+    checks: HealthStatusChecks = field(default_factory=HealthStatusChecks)
     error: str | None = None
-    failed_checks: list[str] = []
+    failed_checks: list[str] = field(default_factory=list)
 
 
 class OrchestrationService(BaseService):
@@ -119,7 +132,7 @@ class OrchestrationService(BaseService):
             return results
 
         except Exception as e:
-            self.logger.error(f"Workflow failed: {e}")
+            self.logger.error(f"Workflow failed: {e}", exc_info=True)
             return {
                 "status": "error",
                 "error": str(e),
@@ -127,22 +140,143 @@ class OrchestrationService(BaseService):
             }
 
     async def run_index_creation_workflow(
-        self, source_folders: list[str], index_directory: str, force_rebuild: bool = False
+        self,
+        source_folders: list[str],
+        index_directory: str,
+        force_rebuild: bool = False,
     ) -> dict[str, Any]:
         """Run index creation workflow."""
 
         self.logger.info("Starting index creation workflow")
+        workflow_start_time = asyncio.get_event_loop().time()
+
+        index_path = Path(index_directory)
+        if index_path.exists() and not force_rebuild:
+            return {
+                "status": "skipped",
+                "message": f"Index already exists at {index_directory}. Use --force to rebuild.",
+                "workflow_duration_seconds": asyncio.get_event_loop().time() - workflow_start_time,
+            }
 
         try:
-            # Implementation for index creation workflow
-            # This would coordinate between file processing, embedding generation,
-            # and index creation services
+            # Initialize LLM and Indexing services
+            llm_config = self.config_service.get_llm_config()
+            llm_connector = LLMConnectorFactory.create_from_config_file({"tool": {"ai-unit-test": {"llm": llm_config}}})
+            await llm_connector.initialize()
 
-            return {"status": "success", "message": "Index creation workflow not yet implemented"}
+            indexing_config = self.config_service.get_indexing_config()
+            index_organizer = IndexOrganizerFactory.create_from_config_file(
+                {"tool": {"ai-unit-test": {"indexing": indexing_config}}}
+            )
+
+            # 1. Find all python files
+            self.logger.info(f"Searching for Python files in {source_folders}")
+            source_files = []
+            for folder in source_folders:
+                source_files.extend(list(Path(folder).rglob("*.py")))
+            self.logger.info(f"Found {len(source_files)} Python files.")
+
+            # 2. Chunk files
+            self.logger.info("Chunking files...")
+            all_chunks: list[Chunk] = []
+            for file_path in source_files:
+                try:
+                    with open(file_path, encoding="utf-8") as f:
+                        content = f.read()
+                        all_chunks.extend(self._chunk_source_code(content, str(file_path)))
+                except Exception as e:
+                    self.logger.warning(f"Could not process file {file_path}: {e}")
+            self.logger.info(f"Created {len(all_chunks)} chunks.")
+
+            if not all_chunks:
+                return {
+                    "status": "success",
+                    "message": "No source code found to index.",
+                    "workflow_duration_seconds": asyncio.get_event_loop().time() - workflow_start_time,
+                }
+
+            # 3. Generate embeddings
+            self.logger.info("Generating embeddings...")
+            chunk_contents = [chunk.content for chunk in all_chunks]
+            embedding_model = llm_config.get("embedding_model", "text-embedding-ada-002")
+            embedding_request = EmbeddingRequest(texts=chunk_contents, model=embedding_model)
+            embedding_response = await llm_connector.generate_embeddings(embedding_request)
+            embeddings = embedding_response.embeddings
+
+            # 4. Create metadata
+            self.logger.info("Creating metadata...")
+            metadata = [
+                {
+                    "file_path": chunk.file_path,
+                    "start_line": chunk.start_line,
+                    "end_line": chunk.end_line,
+                    "content_preview": (chunk.content[:200] + "..." if len(chunk.content) > 200 else chunk.content),
+                }
+                for chunk in all_chunks
+            ]
+
+            # 5. Create index
+            self.logger.info(f"Creating index at {index_directory}...")
+            await index_organizer.create_index(
+                embeddings=embeddings,
+                metadata=metadata,
+                index_path=index_path,
+                model_name=embedding_model,
+            )
+
+            workflow_end_time = asyncio.get_event_loop().time()
+            return {
+                "status": "success",
+                "message": f"Index created successfully with {len(all_chunks)} documents.",
+                "files_processed": len(source_files),
+                "chunks_created": len(all_chunks),
+                "workflow_duration_seconds": workflow_end_time - workflow_start_time,
+            }
 
         except Exception as e:
-            self.logger.error(f"Index creation workflow failed: {e}")
-            return {"status": "error", "error": str(e)}
+            self.logger.error(f"Index creation workflow failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "error": str(e),
+                "workflow_duration_seconds": asyncio.get_event_loop().time() - workflow_start_time,
+            }
+
+    def _chunk_source_code(self, source_code: str, file_path: str) -> list[Chunk]:
+        """Chunk source code by classes and functions."""
+        chunks = []
+        try:
+            tree = ast.parse(source_code)
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    start_line = node.lineno
+                    end_line = node.end_lineno
+                    if end_line is None:
+                        # Estimate end line for nodes without it
+                        source_segment = ast.get_source_segment(source_code, node)
+                        if source_segment is None:
+                            continue
+                        end_line = start_line + len(source_segment.splitlines())
+
+                    chunks.append(
+                        Chunk(
+                            file_path=file_path,
+                            start_line=start_line,
+                            end_line=end_line,
+                            content=ast.get_source_segment(source_code, node) or "",
+                        )
+                    )
+        except SyntaxError as e:
+            self.logger.warning(f"Could not parse {file_path} for chunking: {e}")
+            # Fallback to chunking the whole file
+            chunks.append(
+                Chunk(
+                    file_path=file_path,
+                    start_line=1,
+                    end_line=len(source_code.splitlines()),
+                    content=source_code,
+                )
+            )
+        return chunks
 
     async def run_health_check_workflow(self) -> HealthStatus:
         """Run comprehensive system health check."""
@@ -178,7 +312,7 @@ class OrchestrationService(BaseService):
             return health_status
 
         except Exception as e:
-            self.logger.error(f"Health check failed: {e}")
+            self.logger.error(f"Health check failed: {e}", exc_info=True)
             health_status.status = "error"
             health_status.error = str(e)
             return health_status
@@ -217,7 +351,10 @@ class OrchestrationService(BaseService):
 
             available_backends = IndexOrganizerFactory.get_available_organizers()
 
-            return IndexHealth(healthy=len(available_backends) > 0, available_backends=available_backends)
+            return IndexHealth(
+                healthy=len(available_backends) > 0,
+                available_backends=available_backends,
+            )
 
         except Exception as e:
             return IndexHealth(healthy=False, error=str(e))

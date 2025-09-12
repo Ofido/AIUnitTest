@@ -56,7 +56,11 @@ class IndexOrganizer(ABC):
 
     @abstractmethod
     async def create_index(
-        self, embeddings: np.ndarray, metadata: list[dict[str, Any]], index_path: Path, model_name: str
+        self,
+        embeddings: np.ndarray,
+        metadata: list[dict[str, Any]],
+        index_path: Path,
+        model_name: str,
     ) -> IndexMetadata:
         """Create and save a new index."""
         pass

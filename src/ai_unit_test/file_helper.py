@@ -1,4 +1,3 @@
-import ast
 import logging
 from pathlib import Path
 
@@ -76,25 +75,3 @@ def insert_new_test(existing_content: str, new_test: str) -> str:
         return existing_content.rstrip() + "\n\n" + new_test_clean
     else:
         return "\n" + new_test_clean
-
-
-def extract_function_source(file_path: str, function_name: str) -> str | None:
-    """Extracts the source code of a specific function from a file."""
-    try:
-        with open(file_path) as f:
-            file_content = f.read()
-            tree = ast.parse(file_content)
-            for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef) and node.name == function_name:
-                    return ast.get_source_segment(file_content, node)
-    except (FileNotFoundError, SyntaxError) as e:
-        logger.error(f"Error reading or parsing {file_path}: {e}")
-    return None
-
-
-def find_all_test_files(tests_folder: str, patterns: list[str]) -> list[Path]:
-    """Finds all test files in a given directory, based on a list of glob patterns."""
-    test_files: list[Path] = []
-    for pattern in patterns:
-        test_files.extend(list(Path(tests_folder).rglob(pattern)))
-    return test_files

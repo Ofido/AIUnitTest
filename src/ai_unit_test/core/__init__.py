@@ -20,7 +20,12 @@ from .factories.index_factory import IndexOrganizerFactory
 
 # Export factories
 from .factories.llm_factory import LLMConnectorFactory
-from .interfaces.index_organizer import IndexMetadata, IndexOrganizer, IndexStats, SearchResult
+from .interfaces.index_organizer import (
+    IndexMetadata,
+    IndexOrganizer,
+    IndexStats,
+    SearchResult,
+)
 
 # Export interfaces
 from .interfaces.llm_connector import LLMConnector, LLMRequest, LLMResponse, LLMUsage

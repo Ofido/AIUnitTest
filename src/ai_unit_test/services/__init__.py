@@ -10,4 +10,9 @@ from .configuration_service import ConfigurationService
 from .orchestration_service import OrchestrationService
 from .processing_service import TestProcessingService
 
-__all__ = ["BaseService", "ConfigurationService", "TestProcessingService", "OrchestrationService"]
+__all__ = [
+    "BaseService",
+    "ConfigurationService",
+    "TestProcessingService",
+    "OrchestrationService",
+]

@@ -16,7 +16,9 @@ class IndexOrganizerFactory:
 
     @classmethod
     def register_organizer(
-        cls: type["IndexOrganizerFactory"], name: str, organizer_class: type["IndexOrganizer"]
+        cls: type["IndexOrganizerFactory"],
+        name: str,
+        organizer_class: type["IndexOrganizer"],
     ) -> None:
         """Register a new organizer type."""
         cls._organizers[name.lower()] = organizer_class
@@ -32,7 +34,9 @@ class IndexOrganizerFactory:
 
     @classmethod
     def create_organizer(
-        cls: type["IndexOrganizerFactory"], backend: str | None = None, config: dict[str, Any] | None = None
+        cls: type["IndexOrganizerFactory"],
+        backend: str | None = None,
+        config: dict[str, Any] | None = None,
     ) -> "IndexOrganizer":
         """Create an organizer instance."""
         if config is None:
@@ -93,7 +97,9 @@ class IndexOrganizerFactory:
 
     @classmethod
     def _check_availability(
-        cls: type["IndexOrganizerFactory"], name: str, organizer_class: type["IndexOrganizer"]
+        cls: type["IndexOrganizerFactory"],
+        name: str,
+        organizer_class: type["IndexOrganizer"],
     ) -> bool:
         """Check if an organizer backend is available."""
         if name in cls._availability_cache:
@@ -107,7 +113,7 @@ class IndexOrganizerFactory:
                 available = True
             elif name == "sklearn":
                 import joblib  # noqa: F401
-                import sklearn.neighbors  # type: ignore[import-untyped] # noqa: F401
+                import sklearn.neighbors  # noqa: F401
 
                 available = True
             elif name == "memory":
@@ -129,8 +135,17 @@ class IndexOrganizerFactory:
     ) -> dict[str, Any]:
         """Merge configuration with backend-specific defaults."""
         defaults: dict[str, dict[str, Any]] = {
-            "faiss": {"index_type": "IndexFlatIP", "normalize_embeddings": True, "nlist": 100},  # for IVF indices
-            "sklearn": {"algorithm": "ball_tree", "metric": "cosine", "n_neighbors": 10, "n_jobs": -1},
+            "faiss": {
+                "index_type": "IndexFlatIP",
+                "normalize_embeddings": True,
+                "nlist": 100,
+            },  # for IVF indices
+            "sklearn": {
+                "algorithm": "ball_tree",
+                "metric": "cosine",
+                "n_neighbors": 10,
+                "n_jobs": -1,
+            },
             "memory": {"max_documents": 10000, "enable_persistence": False},
         }
 
@@ -142,21 +157,27 @@ class IndexOrganizerFactory:
 def _register_default_organizers() -> None:
     """Register default organizers."""
     try:
-        from ai_unit_test.core.implementations.indexing.faiss_organizer import FaissIndexOrganizer
+        from ai_unit_test.core.implementations.indexing.faiss_organizer import (
+            FaissIndexOrganizer,
+        )
 
         IndexOrganizerFactory.register_organizer("faiss", FaissIndexOrganizer)
     except ImportError:
         pass
 
     try:
-        from ai_unit_test.core.implementations.indexing.sklearn_organizer import SklearnIndexOrganizer
+        from ai_unit_test.core.implementations.indexing.sklearn_organizer import (
+            SklearnIndexOrganizer,
+        )
 
         IndexOrganizerFactory.register_organizer("sklearn", SklearnIndexOrganizer)
     except ImportError:
         pass
 
     try:
-        from ai_unit_test.core.implementations.indexing.memory_organizer import MemoryIndexOrganizer
+        from ai_unit_test.core.implementations.indexing.memory_organizer import (
+            MemoryIndexOrganizer,
+        )
 
         IndexOrganizerFactory.register_organizer("memory", MemoryIndexOrganizer)
     except ImportError:

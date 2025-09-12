@@ -28,6 +28,7 @@ dependencies = [
   "numpy",
   "scikit-learn",
   "joblib",
+  "typing-extensions",
 ]
 
 [project.urls]

@@ -4,10 +4,17 @@ import asyncio
 import logging
 import time
 from collections.abc import AsyncGenerator
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from ai_unit_test.core.exceptions import ConfigurationError, LLMConnectionError, LLMProviderError
-from ai_unit_test.core.interfaces.llm_connector import LLMConnector, LLMRequest, LLMResponse
+from ai_unit_test.core.interfaces.llm_connector import (
+    EmbeddingRequest,
+    EmbeddingResponse,
+    LLMConnector,
+    LLMRequest,
+    LLMResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,17 +49,31 @@ else:
         TextGenerationPipeline = None
 
 
-class HuggingFaceConnector(LLMConnector):
+@dataclass
+class HuggingFaceConfig:
+    api_key: str | None = None
+    timeout: int = 30
+    model: str | None = "microsoft/DialoGPT-medium"
+    use_api: bool = False
+    device: int = -1
+    max_length: int = 512
+
+
+class HuggingFaceConnector(LLMConnector[HuggingFaceConfig]):
     """HuggingFace connector supporting both local and API models."""
 
     api_client: httpx.AsyncClient
     pipeline: TextGenerationPipeline
     tokenizer: PreTrainedTokenizerBase
+    config: HuggingFaceConfig
 
-    def __init__(self, config: dict[str, Any]) -> None:
-        super().__init__(config)
+    def __init__(self, config: dict[str, Any] | HuggingFaceConfig) -> None:
+        if isinstance(config, dict):
+            self.config = HuggingFaceConfig(**config)
+        else:
+            self.config = config
         self.model = None
-        self.use_api = config.get("use_api", False)
+        self.use_api = self.config.use_api
 
     async def initialize(self) -> None:
         """Initialize HuggingFace model or API client."""
@@ -76,10 +97,10 @@ class HuggingFaceConnector(LLMConnector):
             self.api_client = httpx.AsyncClient(
                 base_url="https://api-inference.huggingface.co",
                 headers={
-                    "Authorization": f"Bearer {self.config.get('api_key', '')}",
+                    "Authorization": f"Bearer {self.config.api_key}",
                     "Content-Type": "application/json",
                 },
-                timeout=self.config.get("timeout", 30),
+                timeout=self.config.timeout,
             )
 
         except Exception as e:
@@ -91,16 +112,15 @@ class HuggingFaceConnector(LLMConnector):
             raise ConfigurationError("transformers is required for local HuggingFace models")
 
         try:
-            model_name = self.config.get("model_name", "microsoft/DialoGPT-medium")
-
+            model_name = self.config.model or "microsoft/DialoGPT-medium"
             # Run in thread pool to avoid blocking
             self.pipeline = await asyncio.get_event_loop().run_in_executor(
                 None,
                 lambda: pipeline(
                     "text-generation",
                     model=model_name,
-                    device=self.config.get("device", -1),  # -1 for CPU
-                    max_length=self.config.get("max_length", 512),
+                    device=self.config.device,  # -1 for CPU
+                    max_length=self.config.max_length,
                 ),
             )
 
@@ -127,7 +147,7 @@ class HuggingFaceConnector(LLMConnector):
             return LLMResponse(
                 content=content,
                 usage={"total_tokens": len(content.split())},  # Approximate
-                model=self.config.get("model_name", "huggingface"),
+                model=self.config.model or "microsoft/DialoGPT-medium",
                 finish_reason="stop",
                 response_time_ms=response_time_ms,
             )
@@ -152,7 +172,7 @@ class HuggingFaceConnector(LLMConnector):
             },
         }
 
-        model_name = self.config.get("model_name", "microsoft/DialoGPT-medium")
+        model_name = self.config.model or "microsoft/DialoGPT-medium"
         response = await self.api_client.post(f"/models/{model_name}", json=payload)
 
         if response.status_code != 200:
@@ -160,7 +180,7 @@ class HuggingFaceConnector(LLMConnector):
 
         result = response.json()
         if isinstance(result, list) and len(result) > 0:
-            return result[0].get("generated_text", "")  # type: ignore
+            return result[0].get("generated_text", "")  # type: ignore[no-any-return]
 
         return ""
 
@@ -186,7 +206,7 @@ class HuggingFaceConnector(LLMConnector):
         if result and len(result) > 0:
             generated_text = result[0]["generated_text"]
             # Extract only the new generated part
-            return generated_text[len(prompt) :].strip()  # type: ignore[no-any-return]
+            return str(generated_text[len(prompt) :].strip())
 
         return ""
 
@@ -195,10 +215,14 @@ class HuggingFaceConnector(LLMConnector):
         # For simplicity, generate full response and yield in chunks
         response = await self.generate_response(request)
 
-        words = response.split()  # type: ignore
+        words = response.content.split()
         for word in words:
             yield word + " "
             await asyncio.sleep(0.05)  # Simulate streaming delay
+
+    async def generate_embeddings(self, request: EmbeddingRequest) -> EmbeddingResponse:
+        """Generate embeddings using HuggingFace."""
+        raise NotImplementedError("Embedding generation is not yet implemented for the HuggingFace connector.")
 
     async def health_check(self) -> bool:
         """Check HuggingFace health."""
@@ -206,7 +230,7 @@ class HuggingFaceConnector(LLMConnector):
             test_request = LLMRequest(
                 system_message="You are helpful.",
                 user_message="Hi",
-                model=self.config.get("model_name", "test"),
+                model=self.config.model or "microsoft/DialoGPT-medium",
                 temperature=0.1,
                 max_tokens=5,
             )
@@ -219,7 +243,13 @@ class HuggingFaceConnector(LLMConnector):
 
     def get_available_models(self) -> list[str]:
         """Get available HuggingFace models."""
-        return ["microsoft/DialoGPT-medium", "microsoft/DialoGPT-large", "gpt2", "gpt2-medium", "distilgpt2"]
+        return [
+            "microsoft/DialoGPT-medium",
+            "microsoft/DialoGPT-large",
+            "gpt2",
+            "gpt2-medium",
+            "distilgpt2",
+        ]
 
     def get_connector_info(self) -> dict[str, Any]:
         """Get connector information."""
@@ -228,7 +258,7 @@ class HuggingFaceConnector(LLMConnector):
             "version": "1.0.0",
             "supports_streaming": True,
             "use_api": self.use_api,
-            "model_name": self.config.get("model_name", "microsoft/DialoGPT-medium"),
+            "model_name": self.config.model or "microsoft/DialoGPT-medium",
         }
 
     async def __aexit__(self, exc_type: type | None, exc_val: BaseException | None, exc_tb: Any | None) -> None:

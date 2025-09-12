@@ -9,14 +9,23 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from ai_unit_test.core.exceptions import ConfigurationError, IndexError, IndexNotFoundError
-from ai_unit_test.core.interfaces.index_organizer import IndexMetadata, IndexOrganizer, IndexStats, SearchResult
+from ai_unit_test.core.exceptions import (
+    ConfigurationError,
+    IndexError,
+    IndexNotFoundError,
+)
+from ai_unit_test.core.interfaces.index_organizer import (
+    IndexMetadata,
+    IndexOrganizer,
+    IndexStats,
+    SearchResult,
+)
 
 if TYPE_CHECKING:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         import faiss
-        from faiss.swigfaiss import IndexFlatIP, IndexFlatL2, IndexIVFFlat  # type: ignore[import-untyped]
+        from faiss.swigfaiss import IndexFlatIP, IndexFlatL2, IndexIVFFlat
     FAISS_AVAILABLE = True
 else:
     try:
@@ -52,7 +61,11 @@ class FaissIndexOrganizer(IndexOrganizer):
         self.normalize_embeddings = config.get("normalize_embeddings", True)
 
     async def create_index(
-        self, embeddings: np.ndarray, metadata: list[dict[str, Any]], index_path: Path, model_name: str
+        self,
+        embeddings: np.ndarray,
+        metadata: list[dict[str, Any]],
+        index_path: Path,
+        model_name: str,
     ) -> IndexMetadata:
         """Create and save FAISS index."""
         try:
@@ -80,7 +93,10 @@ class FaissIndexOrganizer(IndexOrganizer):
                 total_documents=len(metadata),
                 embedding_dimension=dimension,
                 backend_type="faiss",
-                backend_config={"index_type": self.index_type, "normalize_embeddings": self.normalize_embeddings},
+                backend_config={
+                    "index_type": self.index_type,
+                    "normalize_embeddings": self.normalize_embeddings,
+                },
             )
 
             # Save to disk
@@ -166,7 +182,13 @@ class FaissIndexOrganizer(IndexOrganizer):
             results = []
             for score, idx in zip(scores[0], indices[0]):
                 if idx != -1 and score >= threshold:
-                    results.append(SearchResult(metadata=self.metadata[idx], score=float(score), document_id=str(idx)))
+                    results.append(
+                        SearchResult(
+                            metadata=self.metadata[idx],
+                            score=float(score),
+                            document_id=str(idx),
+                        )
+                    )
 
             return results
 

@@ -53,7 +53,7 @@ class CoverageProcessingResult:
 class TestProcessingService(BaseService):
     """Service for processing test generation requests."""
 
-    llm_connector: LLMConnector | None
+    llm_connector: LLMConnector[Any] | None
     index_organizer: IndexOrganizer | None
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
@@ -332,7 +332,12 @@ class TestProcessingService(BaseService):
         return f"{base_msg} {style_msg}"
 
     def _build_user_message(
-        self, file_name: str, coverage_lines: list[int], source_code: str, test_code: str, other_tests_content: str
+        self,
+        file_name: str,
+        coverage_lines: list[int],
+        source_code: str,
+        test_code: str,
+        other_tests_content: str,
     ) -> str:
         """Build user message for LLM with all context."""
         return f"""Here is the information for the test generation:
@@ -384,7 +389,10 @@ from {source_file_path.stem} import *
         return self
 
     async def __aexit__(
-        self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         """Async context manager exit."""
         if self.llm_connector:

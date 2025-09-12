@@ -110,7 +110,9 @@ def test_collect_missing_lines_multiple_files(mock_coverage_class: MagicMock) ->
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
-def test_collect_missing_lines_multiple_files_with_all_missing(mock_coverage_class: MagicMock) -> None:
+def test_collect_missing_lines_multiple_files_with_all_missing(
+    mock_coverage_class: MagicMock,
+) -> None:
     """
     Tests that collect_missing_lines correctly identifies missing lines for multiple files with all missing lines.
     """
@@ -140,7 +142,9 @@ def test_collect_missing_lines_multiple_files_with_all_missing(mock_coverage_cla
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
-def test_collect_missing_lines_multiple_files_with_some_missing(mock_coverage_class: MagicMock) -> None:
+def test_collect_missing_lines_multiple_files_with_some_missing(
+    mock_coverage_class: MagicMock,
+) -> None:
     """
     Tests that collect_missing_lines correctly identifies missing lines for multiple files with some missing lines.
     """
@@ -173,7 +177,9 @@ def test_collect_missing_lines_multiple_files_with_some_missing(mock_coverage_cl
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
-def test_collect_missing_lines_with_multiple_missing_lines(mock_coverage_class: MagicMock) -> None:
+def test_collect_missing_lines_with_multiple_missing_lines(
+    mock_coverage_class: MagicMock,
+) -> None:
     """
     Tests that collect_missing_lines correctly identifies multiple missing lines in a single file.
     """
@@ -193,7 +199,9 @@ def test_collect_missing_lines_with_multiple_missing_lines(mock_coverage_class: 
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
-def test_collect_missing_lines_with_no_measured_files(mock_coverage_class: MagicMock) -> None:
+def test_collect_missing_lines_with_no_measured_files(
+    mock_coverage_class: MagicMock,
+) -> None:
     """
     Tests that collect_missing_lines returns an empty dict when there are no measured files.
     """
@@ -209,19 +217,35 @@ def test_collect_missing_lines_with_no_measured_files(mock_coverage_class: Magic
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
-def test_collect_missing_lines_with_specific_missing_lines(mock_coverage_class: MagicMock) -> None:
+def test_collect_missing_lines_with_specific_missing_lines(
+    mock_coverage_class: MagicMock,
+) -> None:
     """
     Tests that collect_missing_lines correctly identifies specific missing lines in a file.
     """
     mock_cov_instance = mock_coverage_class.return_value
     mock_cov_instance.get_data.return_value.measured_files.return_value = ["src/specific_missing.py"]
-    mock_cov_instance.analysis.return_value = ("", "", [12, 13, 14, 15, 16, 17, 18, 19], "")
+    mock_cov_instance.analysis.return_value = (
+        "",
+        "",
+        [12, 13, 14, 15, 16, 17, 18, 19],
+        "",
+    )
 
     missing_info = collect_missing_lines("fake.coverage")
 
     assert len(missing_info) == 1
     assert Path("src/specific_missing.py") in missing_info
-    assert missing_info[Path("src/specific_missing.py")] == [12, 13, 14, 15, 16, 17, 18, 19]
+    assert missing_info[Path("src/specific_missing.py")] == [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+    ]
     mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
     mock_cov_instance.load.assert_called_once()
     mock_cov_instance.get_data.assert_called_once()
@@ -229,7 +253,9 @@ def test_collect_missing_lines_with_specific_missing_lines(mock_coverage_class: 
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
-def test_collect_missing_lines_with_all_lines_missing(mock_coverage_class: MagicMock) -> None:
+def test_collect_missing_lines_with_all_lines_missing(
+    mock_coverage_class: MagicMock,
+) -> None:
     """
     Tests that collect_missing_lines correctly identifies all missing lines in a file.
     """
@@ -246,7 +272,24 @@ def test_collect_missing_lines_with_all_lines_missing(mock_coverage_class: Magic
 
     assert len(missing_info) == 1
     assert Path("src/all_missing.py") in missing_info
-    assert missing_info[Path("src/all_missing.py")] == [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31]
+    assert missing_info[Path("src/all_missing.py")] == [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        23,
+        24,
+        25,
+        26,
+        27,
+        29,
+        30,
+        31,
+    ]
     mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
     mock_cov_instance.load.assert_called_once()
     mock_cov_instance.get_data.assert_called_once()
@@ -254,7 +297,9 @@ def test_collect_missing_lines_with_all_lines_missing(mock_coverage_class: Magic
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
-def test_collect_missing_lines_with_all_lines_missing_in_file(mock_coverage_class: MagicMock) -> None:
+def test_collect_missing_lines_with_all_lines_missing_in_file(
+    mock_coverage_class: MagicMock,
+) -> None:
     """
     Tests that collect_missing_lines correctly identifies all missing lines in a specific file.
     """
@@ -296,7 +341,9 @@ def test_collect_missing_lines_with_all_lines_missing_in_file(mock_coverage_clas
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
-def test_collect_missing_lines_with_specific_missing_lines_multiple(mock_coverage_class: MagicMock) -> None:
+def test_collect_missing_lines_with_specific_missing_lines_multiple(
+    mock_coverage_class: MagicMock,
+) -> None:
     """
     Tests that collect_missing_lines correctly identifies specific missing lines in multiple files.
     """
@@ -326,7 +373,9 @@ def test_collect_missing_lines_with_specific_missing_lines_multiple(mock_coverag
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
-def test_collect_missing_lines_with_all_lines_missing_in_file_multiple(mock_coverage_class: MagicMock) -> None:
+def test_collect_missing_lines_with_all_lines_missing_in_file_multiple(
+    mock_coverage_class: MagicMock,
+) -> None:
     """
     Tests that collect_missing_lines correctly identifies all missing lines in multiple files.
     """
@@ -354,9 +403,43 @@ def test_collect_missing_lines_with_all_lines_missing_in_file_multiple(mock_cove
 
     assert len(missing_info) == 2
     assert Path("src/file_one.py") in missing_info
-    assert missing_info[Path("src/file_one.py")] == [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31]
+    assert missing_info[Path("src/file_one.py")] == [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        23,
+        24,
+        25,
+        26,
+        27,
+        29,
+        30,
+        31,
+    ]
     assert Path("src/file_two.py") in missing_info
-    assert missing_info[Path("src/file_two.py")] == [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31]
+    assert missing_info[Path("src/file_two.py")] == [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        23,
+        24,
+        25,
+        26,
+        27,
+        29,
+        30,
+        31,
+    ]
     mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
     mock_cov_instance.load.assert_called_once()
     mock_cov_instance.get_data.assert_called_once()

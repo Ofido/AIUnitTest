@@ -8,7 +8,12 @@ from typing import Any
 import numpy as np
 
 from ai_unit_test.core.exceptions import IndexError
-from ai_unit_test.core.interfaces.index_organizer import IndexMetadata, IndexOrganizer, IndexStats, SearchResult
+from ai_unit_test.core.interfaces.index_organizer import (
+    IndexMetadata,
+    IndexOrganizer,
+    IndexStats,
+    SearchResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +30,11 @@ class MemoryIndexOrganizer(IndexOrganizer):
         self.use_cosine_similarity = config.get("use_cosine_similarity", True)
 
     async def create_index(
-        self, embeddings: np.ndarray, metadata: list[dict[str, Any]], index_path: Path, model_name: str
+        self,
+        embeddings: np.ndarray,
+        metadata: list[dict[str, Any]],
+        index_path: Path,
+        model_name: str,
     ) -> IndexMetadata:
         """Create in-memory index."""
         try:
@@ -112,7 +121,13 @@ class MemoryIndexOrganizer(IndexOrganizer):
             for idx in top_indices:
                 score = similarities[idx]
                 if score >= threshold:
-                    results.append(SearchResult(metadata=self.metadata[idx], score=float(score), document_id=str(idx)))
+                    results.append(
+                        SearchResult(
+                            metadata=self.metadata[idx],
+                            score=float(score),
+                            document_id=str(idx),
+                        )
+                    )
 
             return results
 
@@ -241,7 +256,7 @@ class MemoryIndexOrganizer(IndexOrganizer):
         """Get all embeddings (useful for testing)."""
         if not self._index_loaded:
             raise IndexError("No index loaded")
-        return self.embeddings.copy()
+        return self.embeddings.copy()  # type: ignore[no-any-return]
 
     def get_all_metadata(self) -> list[dict[str, Any]]:
         """Get all metadata (useful for testing)."""
@@ -277,4 +292,4 @@ class MemoryIndexOrganizer(IndexOrganizer):
         embeddings_size = self.embeddings.nbytes
         metadata_size = len(str(self.metadata).encode("utf-8"))
 
-        return (embeddings_size + metadata_size) / (1024 * 1024)
+        return float((embeddings_size + metadata_size) / (1024 * 1024))  # pyright: ignore[reportGeneralTypeIssues]

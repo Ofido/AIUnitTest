@@ -6,7 +6,10 @@ from typing import Any
 
 import typer
 
-from ai_unit_test.services.orchestration_service import HealthStatus, OrchestrationService
+from ai_unit_test.services.orchestration_service import (
+    HealthStatus,
+    OrchestrationService,
+)
 
 logger = logging.getLogger(__name__)
 app = typer.Typer()
@@ -46,7 +49,10 @@ def generate_tests(
 
         results = asyncio.run(
             orchestration_service.run_test_generation_workflow(
-                folders=folders, tests_folder=tests_folder, coverage_file=coverage_file, auto_discovery=auto
+                folders=folders,
+                tests_folder=tests_folder,
+                coverage_file=coverage_file,
+                auto_discovery=auto,
             )
         )
 

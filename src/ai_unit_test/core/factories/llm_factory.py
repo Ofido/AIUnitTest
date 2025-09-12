@@ -12,10 +12,14 @@ from ai_unit_test.core.exceptions import ConfigurationError
 class LLMConnectorFactory:
     """Factory for creating LLM connector instances."""
 
-    _connectors: dict[str, type["LLMConnector"]] = {}
+    _connectors: dict[str, type[Any]] = {}
 
     @classmethod
-    def register_connector(cls: type["LLMConnectorFactory"], name: str, connector_class: type["LLMConnector"]) -> None:
+    def register_connector(
+        cls: type["LLMConnectorFactory"],
+        name: str,
+        connector_class: type[Any],
+    ) -> None:
         """Register a new connector type."""
         cls._connectors[name.lower()] = connector_class
 
@@ -26,8 +30,10 @@ class LLMConnectorFactory:
 
     @classmethod
     def create_connector(
-        cls: type["LLMConnectorFactory"], provider: str, config: dict[str, Any] | None = None
-    ) -> "LLMConnector":
+        cls: type["LLMConnectorFactory"],
+        provider: str,
+        config: dict[str, Any] | None = None,
+    ) -> "LLMConnector[Any]":
         """Create a connector instance."""
         if config is None:
             config = {}
@@ -41,14 +47,11 @@ class LLMConnectorFactory:
         # Merge with environment-based config
         merged_config = cls._merge_environment_config(provider_lower, config)
 
-        # Validate required configuration
-        cls._validate_config(provider_lower, merged_config)
-
         connector_class = cls._connectors[provider_lower]
-        return connector_class(merged_config)
+        return connector_class(merged_config)  # type: ignore[no-any-return]
 
     @classmethod
-    def create_from_config_file(cls: type["LLMConnectorFactory"], config: dict[str, Any]) -> "LLMConnector":
+    def create_from_config_file(cls: type["LLMConnectorFactory"], config: dict[str, Any]) -> "LLMConnector[Any]":
         """Create connector from pyproject.toml configuration."""
         llm_config = config.get("tool", {}).get("ai-unit-test", {}).get("llm", {})
 
@@ -88,20 +91,6 @@ class LLMConnectorFactory:
 
         return merged
 
-    @classmethod
-    def _validate_config(cls: type["LLMConnectorFactory"], provider: str, config: dict[str, Any]) -> None:
-        """Validate provider-specific configuration."""
-        required_configs = {
-            "openai": ["api_key"],
-            "huggingface": [],  # Can work without API key for local models
-            "mock": [],
-        }
-
-        if provider in required_configs:
-            for required_key in required_configs[provider]:
-                if required_key not in config or not config[required_key]:
-                    raise ConfigurationError(f"Missing required configuration for {provider}: {required_key}")
-
 
 # Auto-register connectors when they're imported
 def _register_default_connectors() -> None:
@@ -117,13 +106,6 @@ def _register_default_connectors() -> None:
         from ai_unit_test.core.implementations.llm.huggingface_connector import HuggingFaceConnector
 
         LLMConnectorFactory.register_connector("huggingface", HuggingFaceConnector)
-    except ImportError:
-        pass
-
-    try:
-        from ai_unit_test.core.implementations.llm.mock_connector import MockConnector
-
-        LLMConnectorFactory.register_connector("mock", MockConnector)
     except ImportError:
         pass
 

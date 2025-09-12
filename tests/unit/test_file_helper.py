@@ -4,8 +4,6 @@ from unittest.mock import mock_open, patch
 import pytest
 
 from ai_unit_test.file_helper import (
-    extract_function_source,
-    find_all_test_files,
     find_relevant_tests,
     find_test_file,
     read_file_content,
@@ -62,54 +60,6 @@ def test_write_file_content() -> None:
         mock_file().write.assert_called_once_with("new content")
 
 
-def test_extract_function_source_found() -> None:
-    """
-    Tests that extract_function_source correctly extracts the source of a function.
-    """
-    file_content = """def func_a():
-    pass
-
-def func_b():
-    return 1
-"""
-    with patch("builtins.open", mock_open(read_data=file_content)):
-        source = extract_function_source("dummy.py", "func_b")
-        assert source == "def func_b():\n    return 1"
-
-
-def test_extract_function_source_not_found() -> None:
-    """
-    Tests that extract_function_source returns None when the function is not found.
-    """
-    file_content = """def func_a():
-    pass
-"""
-    with patch("builtins.open", mock_open(read_data=file_content)):
-        source = extract_function_source("dummy.py", "non_existent_func")
-        assert source is None
-
-
-def test_extract_function_source_file_not_found() -> None:
-    """
-    Tests that extract_function_source returns None when the file is not found.
-    """
-    with patch("builtins.open", side_effect=FileNotFoundError):
-        source = extract_function_source("non_existent.py", "func")
-        assert source is None
-
-
-def test_extract_function_source_syntax_error() -> None:
-    """
-    Tests that extract_function_source returns None when there is a syntax error in the file.
-    """
-    file_content = """def func_a(
-    pass
-"""
-    with patch("builtins.open", mock_open(read_data=file_content)):
-        source = extract_function_source("dummy.py", "func_a")
-        assert source is None
-
-
 def test_find_relevant_tests_found() -> None:
     """
     Tests that find_relevant_tests correctly finds relevant tests for a given source file.
@@ -143,7 +93,10 @@ def test_find_test_file_multiple_found() -> None:
     Tests that find_test_file returns the first found test file when multiple exist.
     """
     with patch("pathlib.Path.rglob") as mock_rglob:
-        mock_rglob.return_value = [Path("tests/unit/test_dummy_source.py"), Path("tests/unit/test_another_source.py")]
+        mock_rglob.return_value = [
+            Path("tests/unit/test_dummy_source.py"),
+            Path("tests/unit/test_another_source.py"),
+        ]
         test_file = find_test_file("src/dummy_source.py", "tests/unit")
         assert test_file == Path("tests/unit/test_dummy_source.py")
 
@@ -384,29 +337,3 @@ def test_write_file_content_w_plus_mode() -> None:
         write_file_content(Path("dummy.txt"), "new content", mode="w+")
         mock_file.assert_called_once_with(Path("dummy.txt"), "w+")
         mock_file().write.assert_called_once_with("new content")
-
-
-def test_extract_function_source_multiple_functions() -> None:
-    """
-    Tests that extract_function_source correctly extracts the source of a function when multiple functions are present.
-    """
-    file_content = """def func_a():
-    pass
-
-def func_b():
-    return 1
-
-def func_c():
-    return 2
-"""
-    with patch("builtins.open", mock_open(read_data=file_content)):
-        source = extract_function_source("dummy.py", "func_c")
-        assert source == "def func_c():\n    return 2"
-
-
-def test_find_all_test_files_no_patterns() -> None:
-    """
-    Tests that find_all_test_files returns an empty list when no patterns are provided.
-    """
-    test_files = find_all_test_files("tests/unit", [])
-    assert test_files == []

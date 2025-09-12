@@ -9,13 +9,22 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from ai_unit_test.core.exceptions import ConfigurationError, IndexError, IndexNotFoundError
-from ai_unit_test.core.interfaces.index_organizer import IndexMetadata, IndexOrganizer, IndexStats, SearchResult
+from ai_unit_test.core.exceptions import (
+    ConfigurationError,
+    IndexError,
+    IndexNotFoundError,
+)
+from ai_unit_test.core.interfaces.index_organizer import (
+    IndexMetadata,
+    IndexOrganizer,
+    IndexStats,
+    SearchResult,
+)
 
 if TYPE_CHECKING:
     import joblib
-    from sklearn.metrics.pairwise import cosine_similarity  # type: ignore[import-untyped]
-    from sklearn.neighbors import NearestNeighbors  # type: ignore[import-untyped]
+    from sklearn.metrics.pairwise import cosine_similarity
+    from sklearn.neighbors import NearestNeighbors
 
     SKLEARN_AVAILABLE = True
 else:
@@ -86,7 +95,11 @@ class SklearnIndexOrganizer(IndexOrganizer):
                 total_documents=len(metadata),
                 embedding_dimension=embeddings.shape[1],
                 backend_type="sklearn",
-                backend_config={"algorithm": self.algorithm, "metric": self.metric, "n_jobs": self.n_jobs},
+                backend_config={
+                    "algorithm": self.algorithm,
+                    "metric": self.metric,
+                    "n_jobs": self.n_jobs,
+                },
             )
 
             # Save to disk
@@ -181,7 +194,13 @@ class SklearnIndexOrganizer(IndexOrganizer):
             results = []
             for _, (score, idx) in enumerate(zip(scores, indices[0])):
                 if score >= threshold:
-                    results.append(SearchResult(metadata=self.metadata[idx], score=float(score), document_id=str(idx)))
+                    results.append(
+                        SearchResult(
+                            metadata=self.metadata[idx],
+                            score=float(score),
+                            document_id=str(idx),
+                        )
+                    )
 
             return results
 
@@ -238,11 +257,7 @@ class SklearnIndexOrganizer(IndexOrganizer):
             self.metadata = [self.metadata[i] for i in range(len(self.metadata)) if mask[i]]
 
             # Retrain the model
-            if len(self.embeddings) > 0:
-                self.model.fit(self.embeddings)
-            else:
-                # If no embeddings are left, set model to None but it can cause an error?
-                self.model = None  # pyright: ignore[reportAttributeAccessIssue]
+            self.model.fit(self.embeddings)
 
             # Update info
             self.index_info.total_documents = len(self.metadata)

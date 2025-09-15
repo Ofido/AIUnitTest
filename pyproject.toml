@@ -51,6 +51,7 @@ dev = [
   "pytest",
   "pytest-cov",
   "pytest-asyncio",
+  "pytest-dotenv",
 ]
 
 [tool.black]
@@ -147,7 +148,6 @@ markers = [
 ]
 
 [tool.coverage.run]
-branch = true
 source = ["src"]
 omit = ["tests/*", "main.py", "src/ai_unit_test/_version.py"]
 

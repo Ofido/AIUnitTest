@@ -12,6 +12,8 @@ flake8-annotations
 pytest
 pytest-cov
 pytest-asyncio
+pytest-mock
+pytest-dotenv
 pre-commit
 faiss-cpu
 sentence-transformers
@@ -19,4 +21,4 @@ numpy
 scikit-learn
 joblib
 joblib-stubs
-pytest-mock
+psutil

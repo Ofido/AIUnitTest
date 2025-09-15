@@ -61,41 +61,40 @@ class OpenAIConnector(LLMConnector[OpenAIConnectorConfig]):
     _rate_limiter: "RateLimiter"
     config: OpenAIConnectorConfig
 
-    def __init__(self, config: OpenAIConnectorConfig | dict[str, Any]) -> None:
-        # Permite inicializar com dict para retrocompatibilidade
-        if isinstance(config, dict):
-            config_obj = OpenAIConnectorConfig(
-                api_key=config.get("api_key", ""),
-                base_url=config.get("base_url"),
-                organization=config.get("organization"),
-                timeout=config.get("timeout", 30),
-                rate_limit=config.get("rate_limit", 60),
-                model=config.get("model"),
-                models_cache_ttl=float(config.get("models_cache_ttl", 300)),
-                max_retries=config.get("max_retries", 3),
-                retry_delay=float(config.get("retry_delay", 1.0)),
-                extra={
-                    k: v
-                    for k, v in config.items()
-                    if k
-                    not in {
-                        "api_key",
-                        "base_url",
-                        "organization",
-                        "timeout",
-                        "rate_limit",
-                        "model",
-                        "models_cache_ttl",
-                        "max_retries",
-                        "retry_delay",
-                    }
-                },
-            )
-        else:
-            config_obj = config
-        super().__init__({})  # Mantém compatibilidade, mas ignora config original
+    def _create_config_from_dict(self, config: dict[str, Any]) -> OpenAIConnectorConfig:
+        return OpenAIConnectorConfig(
+            api_key=config.get("api_key"),
+            base_url=config.get("base_url"),
+            organization=config.get("organization"),
+            timeout=config.get("timeout", 30),
+            rate_limit=config.get("rate_limit", 60),
+            model=config.get("model"),
+            models_cache_ttl=float(config.get("models_cache_ttl", 300)),
+            max_retries=config.get("max_retries", 3),
+            retry_delay=float(config.get("retry_delay", 1.0)),
+            extra={
+                k: v
+                for k, v in config.items()
+                if k
+                not in {
+                    "api_key",
+                    "base_url",
+                    "organization",
+                    "timeout",
+                    "rate_limit",
+                    "model",
+                    "models_cache_ttl",
+                    "max_retries",
+                    "retry_delay",
+                }
+            },
+        )
 
-        self.config: OpenAIConnectorConfig = config_obj
+    def __init__(self, config: OpenAIConnectorConfig | dict[str, Any]) -> None:
+        super().__init__(config)  # Mantém compatibilidade, mas ignora config original
+
+        if not getattr(self.config, "api_key", None):
+            raise ConfigurationError("OpenAI API key is required for connector initialization.")
 
         if not OPENAI_AVAILABLE:
             raise ConfigurationError("OpenAI library is not available. Please install it with: pip install openai")
@@ -104,9 +103,9 @@ class OpenAIConnector(LLMConnector[OpenAIConnectorConfig]):
         self._available_models_cache: list[str] | None = None
         self._models_cache_ts: float | None = None
         self._models_cache_ttl = self.config.models_cache_ttl
-        self._model_priority_chat = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
+        self._model_priority_chat = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-5-nano"]
         self._model_priority_embeddings = ["text-embedding-3-large", "text-embedding-3-small", "text-embedding-ada-002"]
-        self._model_priority_streaming = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]
+        self._model_priority_streaming = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-5-nano"]
 
     async def initialize(self) -> None:
         """Initialize OpenAI client and rate limiter."""
@@ -247,7 +246,7 @@ class OpenAIConnector(LLMConnector[OpenAIConnectorConfig]):
             test_request = LLMRequest(
                 system_message="You are a test.",
                 user_message="Say 'OK'",
-                model=self.config.model or "gpt-3.5-turbo",
+                model=self.config.model or "gpt-5-nano",
                 temperature=0.1,
                 max_tokens=1,
             )
@@ -269,7 +268,7 @@ class OpenAIConnector(LLMConnector[OpenAIConnectorConfig]):
             "gpt-4o",
             "gpt-4-turbo",
             "gpt-4",
-            "gpt-3.5-turbo",
+            "gpt-5-nano",
             "text-embedding-3-small",
             "text-embedding-3-large",
             "text-embedding-ada-002",
@@ -323,7 +322,7 @@ class OpenAIConnector(LLMConnector[OpenAIConnectorConfig]):
 
         if models:
             return models[0]
-        return "gpt-3.5-turbo"
+        return "gpt-5-nano"
 
     def get_connector_info(self) -> dict[str, Any]:
         """Get connector information."""

@@ -57,13 +57,18 @@ class LLMConnectorFactory:
 
         if not llm_config:
             # Default to OpenAI if no config specified
-            return cls.create_connector("openai")
+            raise ConfigurationError("No valid configuration found for LLM connector.")
 
         provider = llm_config.get("provider", "openai")
         provider_config = llm_config.get(provider, {})
 
-        # Merge general LLM config with provider-specific config
-        merged_config = {**llm_config, **provider_config}
+        # Mesclar configs: se provider_config for dict, "achatar" no nível superior
+        merged_config = {**llm_config}
+        if isinstance(provider_config, dict):
+            merged_config.update(provider_config)
+        # Remover a chave do provider para evitar passar subdicionário
+        if provider in merged_config:
+            del merged_config[provider]
 
         return cls.create_connector(provider, merged_config)
 
@@ -106,6 +111,13 @@ def _register_default_connectors() -> None:
         from ai_unit_test.core.implementations.llm.huggingface_connector import HuggingFaceConnector
 
         LLMConnectorFactory.register_connector("huggingface", HuggingFaceConnector)
+    except ImportError:
+        pass
+
+    try:
+        from ai_unit_test.core.implementations.llm.mock_connector import MockConnector
+
+        LLMConnectorFactory.register_connector("mock", MockConnector)
     except ImportError:
         pass
 

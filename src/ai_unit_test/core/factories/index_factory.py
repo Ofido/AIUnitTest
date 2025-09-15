@@ -112,8 +112,8 @@ class IndexOrganizerFactory:
 
                 available = True
             elif name == "sklearn":
-                import joblib  # noqa: F401
-                import sklearn.neighbors  # noqa: F401
+                import joblib  # type: ignore[import-untyped] # noqa: F401
+                import sklearn.neighbors  # type: ignore[import-untyped] # noqa: F401
 
                 available = True
             elif name == "memory":
@@ -157,29 +157,23 @@ class IndexOrganizerFactory:
 def _register_default_organizers() -> None:
     """Register default organizers."""
     try:
-        from ai_unit_test.core.implementations.indexing.faiss_organizer import (
-            FaissIndexOrganizer,
-        )
+        from ai_unit_test.core.implementations.indexing.faiss_organizer import FaissIndexOrganizer
 
         IndexOrganizerFactory.register_organizer("faiss", FaissIndexOrganizer)
     except ImportError:
         pass
 
     try:
-        from ai_unit_test.core.implementations.indexing.sklearn_organizer import (
-            SklearnIndexOrganizer,
-        )
+        from ai_unit_test.core.implementations.indexing.sklearn_organizer import SklearnIndexOrganizer
 
         IndexOrganizerFactory.register_organizer("sklearn", SklearnIndexOrganizer)
     except ImportError:
         pass
 
     try:
-        from ai_unit_test.core.implementations.indexing.memory_organizer import (
-            MemoryIndexOrganizer,
-        )
+        from ai_unit_test.core.implementations.indexing.memory_organizer import InMemoryIndexOrganizer
 
-        IndexOrganizerFactory.register_organizer("memory", MemoryIndexOrganizer)
+        IndexOrganizerFactory.register_organizer("memory", InMemoryIndexOrganizer)
     except ImportError:
         pass
 

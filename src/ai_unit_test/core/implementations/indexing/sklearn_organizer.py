@@ -9,22 +9,13 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from ai_unit_test.core.exceptions import (
-    ConfigurationError,
-    IndexError,
-    IndexNotFoundError,
-)
-from ai_unit_test.core.interfaces.index_organizer import (
-    IndexMetadata,
-    IndexOrganizer,
-    IndexStats,
-    SearchResult,
-)
+from ai_unit_test.core.exceptions import ConfigurationError, IndexError, IndexNotFoundError
+from ai_unit_test.core.interfaces.index_organizer import IndexMetadata, IndexOrganizer, IndexStats, SearchResult
 
 if TYPE_CHECKING:
     import joblib
-    from sklearn.metrics.pairwise import cosine_similarity
-    from sklearn.neighbors import NearestNeighbors
+    from sklearn.metrics.pairwise import cosine_similarity  # type: ignore[import-untyped]
+    from sklearn.neighbors import NearestNeighbors  # type: ignore[import-untyped]
 
     SKLEARN_AVAILABLE = True
 else:
@@ -64,6 +55,10 @@ class SklearnIndexOrganizer(IndexOrganizer):
         self.metric = config.get("metric", "cosine")
         self.n_jobs = config.get("n_jobs", -1)
 
+        if self.metric == "cosine" and self.algorithm != "brute":
+            self.algorithm = "brute"
+            logger.warning("Algorithm changed to 'brute' to support 'cosine' metric.")
+
     async def create_index(
         self,
         embeddings: np.ndarray,
@@ -85,6 +80,7 @@ class SklearnIndexOrganizer(IndexOrganizer):
             # Store data
             self.embeddings = embeddings.copy()
             self.metadata = metadata
+            self.doc_ids = [str(i) for i in range(len(metadata))]
 
             # Prepare metadata
             self.index_info = IndexMetadata(
@@ -136,6 +132,7 @@ class SklearnIndexOrganizer(IndexOrganizer):
             # Load metadata
             with open(metadata_file, encoding="utf-8") as f:
                 self.metadata = json.load(f)
+            self.doc_ids = [str(i) for i in range(len(self.metadata))]
 
             # Load manifest
             with open(manifest_file, encoding="utf-8") as f:

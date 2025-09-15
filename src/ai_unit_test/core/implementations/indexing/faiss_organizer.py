@@ -9,23 +9,14 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from ai_unit_test.core.exceptions import (
-    ConfigurationError,
-    IndexError,
-    IndexNotFoundError,
-)
-from ai_unit_test.core.interfaces.index_organizer import (
-    IndexMetadata,
-    IndexOrganizer,
-    IndexStats,
-    SearchResult,
-)
+from ai_unit_test.core.exceptions import ConfigurationError, IndexError, IndexNotFoundError
+from ai_unit_test.core.interfaces.index_organizer import IndexMetadata, IndexOrganizer, IndexStats, SearchResult
 
 if TYPE_CHECKING:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         import faiss
-        from faiss.swigfaiss import IndexFlatIP, IndexFlatL2, IndexIVFFlat
+        from faiss.swigfaiss import IndexFlatIP, IndexFlatL2, IndexIVFFlat  # type: ignore[import-untyped]
     FAISS_AVAILABLE = True
 else:
     try:
@@ -161,40 +152,88 @@ class FaissIndexOrganizer(IndexOrganizer):
             raise IndexError("No index loaded")
 
         try:
-            # Ensure query embedding is 2D and normalized if required
-            if query_embedding.ndim == 1:
-                query_embedding = query_embedding.reshape(1, -1)
+            # Prepare query embedding
+            query_embedding = self._prepare_query_embedding(query_embedding)
 
-            if self.normalize_embeddings:
-                faiss.normalize_L2(query_embedding)
-
-            # Validate dimensions
-            if query_embedding.shape[1] != self.index.d:
-                raise IndexError(
-                    f"Query embedding dimension ({query_embedding.shape[1]}) "
-                    f"doesn't match index dimension ({self.index.d})"
-                )
-
-            # Search
-            scores, indices = self.index.search(query_embedding, k)  # pyright: ignore[reportCallIssue]
+            # Perform search
+            distances, indices = self._perform_search(query_embedding, k)
 
             # Process results
-            results = []
-            for score, idx in zip(scores[0], indices[0]):
-                if idx != -1 and score >= threshold:
-                    results.append(
-                        SearchResult(
-                            metadata=self.metadata[idx],
-                            score=float(score),
-                            document_id=str(idx),
-                        )
-                    )
-
-            return results
+            return self._process_search_results(distances, indices, threshold)
 
         except Exception as e:
             logger.error(f"FAISS search failed: {e}")
             raise IndexError(f"Search failed: {e}")
+
+    def _prepare_query_embedding(self, query_embedding: np.ndarray) -> np.ndarray:
+        """Prepare query embedding for search."""
+        # Ensure query embedding is 2D and normalized if required
+        if query_embedding.ndim == 1:
+            query_embedding = query_embedding.reshape(1, -1)
+
+        if self.normalize_embeddings:
+            faiss.normalize_L2(query_embedding)
+
+        # Validate dimensions
+        if query_embedding.shape[1] != self.index.d:
+            raise IndexError(
+                f"Query embedding dimension ({query_embedding.shape[1]}) "
+                f"doesn't match index dimension ({self.index.d})"
+            )
+
+        return query_embedding
+
+    def _perform_search(self, query_embedding: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
+        """Perform the actual search, handling different SWIG wrapper versions."""
+        try:
+            # Try modern API first (works with newly created indices)
+            return self.index.search(query_embedding, k)  # type: ignore[reportCallIssue,no-any-return]
+        except TypeError:
+            # Fall back to manual search for loaded indices
+            return self._perform_legacy_search(query_embedding, k)
+
+    def _perform_legacy_search(self, query_embedding: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
+        """Perform search using legacy C-style API."""
+        distances = np.empty((query_embedding.shape[0], k), dtype=np.float32)
+        indices = np.empty((query_embedding.shape[0], k), dtype=np.int64)
+
+        # Convert to C-contiguous arrays with proper types
+        query_c = np.ascontiguousarray(query_embedding.astype(np.float32))
+        distances_c = np.ascontiguousarray(distances)
+        indices_c = np.ascontiguousarray(indices)
+
+        # Call the C++ method directly through the Python wrapper
+        self.index.search(
+            query_c.shape[0],
+            faiss.swig_ptr(query_c),
+            k,
+            faiss.swig_ptr(distances_c),
+            faiss.swig_ptr(indices_c),
+        )
+        return distances_c, indices_c
+
+    def _process_search_results(
+        self, distances: np.ndarray, indices: np.ndarray, threshold: float
+    ) -> list[SearchResult]:
+        """Process search results and create SearchResult objects."""
+        results = []
+        for distance, idx in zip(distances[0], indices[0]):
+            if idx != -1:
+                if self.index_type == "IndexFlatIP":
+                    score = float(distance)
+                else:  # IndexFlatL2
+                    score = 1 / (1 + float(distance))
+
+                if score >= threshold:
+                    results.append(
+                        SearchResult(
+                            metadata=self.metadata[idx],
+                            score=score,
+                            document_id=str(idx),
+                        )
+                    )
+
+        return results
 
     async def add_documents(self, embeddings: np.ndarray, metadata: list[dict[str, Any]]) -> None:
         """Add documents to existing index."""
@@ -287,13 +326,13 @@ class FaissIndexOrganizer(IndexOrganizer):
     def _create_faiss_index(self, dimension: int) -> IndexFlatIP | IndexFlatL2 | IndexIVFFlat:
         """Create FAISS index based on configuration."""
         if self.index_type == "IndexFlatIP":
-            return IndexFlatIP(dimension)
+            return faiss.IndexFlatIP(dimension)
         elif self.index_type == "IndexFlatL2":
-            return IndexFlatL2(dimension)
+            return faiss.IndexFlatL2(dimension)
         elif self.index_type == "IndexIVFFlat":
-            quantizer = IndexFlatIP(dimension)
+            quantizer = faiss.IndexFlatIP(dimension)
             nlist = self.config.get("nlist", 100)
-            return IndexIVFFlat(quantizer, dimension, nlist)
+            return faiss.IndexIVFFlat(quantizer, dimension, nlist)
         else:
             raise ConfigurationError(f"Unsupported index type: {self.index_type}")
 

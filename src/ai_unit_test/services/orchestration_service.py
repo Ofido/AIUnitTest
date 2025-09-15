@@ -358,3 +358,36 @@ class OrchestrationService(BaseService):
 
         except Exception as e:
             return IndexHealth(healthy=False, error=str(e))
+
+    async def run_coverage_analysis_workflow(self, folders: list[str], tests_folder: str) -> dict[str, Any]:
+        """Run coverage analysis workflow."""
+        self.logger.info("Starting coverage analysis workflow")
+        workflow_start_time = asyncio.get_event_loop().time()
+
+        try:
+            # Step 1: Initialize test processing service
+            test_config = {
+                "llm": self.config_service.get_llm_config(),
+                "indexing": self.config_service.get_indexing_config(),
+            }
+
+            async with TestProcessingService(test_config) as test_service:
+                # Step 2: Process missing coverage
+                coverage_result = await test_service.process_missing_coverage(folders, tests_folder, ".coverage")
+
+            workflow_end_time = asyncio.get_event_loop().time()
+            self.logger.info(f"Coverage analysis workflow completed in {workflow_end_time - workflow_start_time:.2f}s")
+            return asdict(coverage_result)
+
+        except Exception as e:
+            self.logger.error(f"Coverage analysis workflow failed: {e}", exc_info=True)
+            return {}
+
+    async def load_index(self, index_path: Path) -> None:
+        """Load the index."""
+        self.logger.info(f"Loading index from {index_path}")
+        indexing_config = self.config_service.get_indexing_config()
+        self.index_organizer = IndexOrganizerFactory.create_from_config_file(
+            {"tool": {"ai-unit-test": {"indexing": indexing_config}}}
+        )
+        await self.index_organizer.load_index(index_path)

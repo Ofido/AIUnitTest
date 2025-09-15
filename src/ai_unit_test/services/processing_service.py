@@ -149,8 +149,9 @@ class TestProcessingService(BaseService):
         # Find corresponding test file
         test_file = find_test_file(str(source_file_path), tests_folder)
         if not test_file:
-            self.logger.warning(f"Test file not found for {source_file_path}")
-            return FileTestResult(status="skipped", reason="test_file_not_found", test_generated=False)
+            self.logger.info(f"Test file not found for {source_file_path}, creating it.")
+            test_file = Path(tests_folder) / f"test_{source_file_path.name}"
+            write_file_content(test_file, "")
 
         # Detect test style
         test_style = self._detect_test_style(test_file)

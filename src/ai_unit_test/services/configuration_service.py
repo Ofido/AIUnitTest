@@ -154,7 +154,10 @@ class ConfigurationService(BaseService):
         if pyproject_data is None:
             pyproject_data = self.load_pyproject_config()
 
-        result: dict[str, Any] = pyproject_data.get("tool", {}).get("ai-unit-test", {}).get("llm", {})
+        ai_unit_test_config = pyproject_data.get("tool", {}).get("ai-unit-test", {})
+        result: dict[str, Any] = ai_unit_test_config.get("llm", {})
+        if "llm_provider" in ai_unit_test_config:
+            result["provider"] = ai_unit_test_config.pop("llm_provider")
         return result
 
     def get_indexing_config(self, pyproject_data: dict[str, Any] | None = None) -> dict[str, Any]:

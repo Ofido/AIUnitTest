@@ -12,30 +12,43 @@ def test_collect_missing_lines(mock_coverage_class: MagicMock) -> None:
     """
     Tests that collect_missing_lines correctly identifies missing lines.
     """
-    # Mock the Coverage object and its methods
+    # Mock Coverage instance
     mock_cov_instance = mock_coverage_class.return_value
-    mock_cov_instance.get_data.return_value.measured_files.return_value = [
-        "src/main.py",
-        "src/another_file.py",
-    ]
-    mock_cov_instance.analysis.side_effect = [
-        ("", "", [2, 4], ""),  # Missing lines for src/main.py
-        ("", "", [], ""),  # No missing lines for src/another_file.py
-    ]
+    mock_cov_instance.load.return_value = None
+    mock_cov_instance.combine.return_value = None
 
-    # Call the function under test
+    # Mock json_report para simular geração do arquivo
+    def fake_json_report(outfile):
+        # Simula a criação do arquivo JSON esperado
+        import json
+
+        report_data = {
+            "files": {
+                "src/main.py": {"missing_lines": [2, 4]},
+                "src/another_file.py": {"missing_lines": []},
+            }
+        }
+        with open(outfile, "w") as f:
+            json.dump(report_data, f)
+
+    mock_cov_instance.json_report.side_effect = fake_json_report
+
+    # Simula que o arquivo existe após json_report
+    import builtins
+
+    original_open = builtins.open
+
+    # Executa a função
     missing_info = collect_missing_lines("fake.coverage")
 
     # Assertions
     assert len(missing_info) == 1
     assert Path("src/main.py") in missing_info
     assert missing_info[Path("src/main.py")] == [2, 4]
-    mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
+    mock_coverage_class.assert_called_once_with(data_file="fake.coverage", source=None)
     mock_cov_instance.load.assert_called_once()
-    mock_cov_instance.get_data.assert_called_once()
-    assert mock_cov_instance.analysis.call_count == 2
-    mock_cov_instance.analysis.assert_any_call("src/main.py")
-    mock_cov_instance.analysis.assert_any_call("src/another_file.py")
+    mock_cov_instance.combine.assert_called_once()
+    mock_cov_instance.json_report.assert_called_once()
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
@@ -44,16 +57,30 @@ def test_collect_missing_lines_no_missing(mock_coverage_class: MagicMock) -> Non
     Tests that collect_missing_lines returns an empty dict when no missing lines.
     """
     mock_cov_instance = mock_coverage_class.return_value
-    mock_cov_instance.get_data.return_value.measured_files.return_value = ["src/main.py"]
-    mock_cov_instance.analysis.return_value = ("", "", [], "")
+    mock_cov_instance.load.return_value = None
+    mock_cov_instance.combine.return_value = None
+
+    # Mock json_report para simular arquivo sem linhas faltantes
+    def fake_json_report(outfile):
+        import json
+
+        report_data = {
+            "files": {
+                "src/main.py": {"missing_lines": []},
+            }
+        }
+        with open(outfile, "w") as f:
+            json.dump(report_data, f)
+
+    mock_cov_instance.json_report.side_effect = fake_json_report
 
     missing_info = collect_missing_lines("fake.coverage")
 
     assert len(missing_info) == 0
-    mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
+    mock_coverage_class.assert_called_once_with(data_file="fake.coverage", source=None)
     mock_cov_instance.load.assert_called_once()
-    mock_cov_instance.get_data.assert_called_once()
-    mock_cov_instance.analysis.assert_called_once_with("src/main.py")
+    mock_cov_instance.combine.assert_called_once()
+    mock_cov_instance.json_report.assert_called_once()
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
@@ -62,18 +89,31 @@ def test_collect_missing_lines_single_file(mock_coverage_class: MagicMock) -> No
     Tests that collect_missing_lines correctly identifies missing lines for a single file.
     """
     mock_cov_instance = mock_coverage_class.return_value
-    mock_cov_instance.get_data.return_value.measured_files.return_value = ["src/single_file.py"]
-    mock_cov_instance.analysis.return_value = ("", "", [5, 10], "")
+    mock_cov_instance.load.return_value = None
+    mock_cov_instance.combine.return_value = None
+
+    def fake_json_report(outfile):
+        import json
+
+        report_data = {
+            "files": {
+                "src/single_file.py": {"missing_lines": [10, 12]},
+            }
+        }
+        with open(outfile, "w") as f:
+            json.dump(report_data, f)
+
+    mock_cov_instance.json_report.side_effect = fake_json_report
 
     missing_info = collect_missing_lines("fake.coverage")
 
     assert len(missing_info) == 1
     assert Path("src/single_file.py") in missing_info
-    assert missing_info[Path("src/single_file.py")] == [5, 10]
-    mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
+    assert missing_info[Path("src/single_file.py")] == [10, 12]
+    mock_coverage_class.assert_called_once_with(data_file="fake.coverage", source=None)
     mock_cov_instance.load.assert_called_once()
-    mock_cov_instance.get_data.assert_called_once()
-    mock_cov_instance.analysis.assert_called_once_with("src/single_file.py")
+    mock_cov_instance.combine.assert_called_once()
+    mock_cov_instance.json_report.assert_called_once()
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
@@ -82,16 +122,23 @@ def test_collect_missing_lines_multiple_files(mock_coverage_class: MagicMock) ->
     Tests that collect_missing_lines correctly identifies missing lines for multiple files.
     """
     mock_cov_instance = mock_coverage_class.return_value
-    mock_cov_instance.get_data.return_value.measured_files.return_value = [
-        "src/file_one.py",
-        "src/file_two.py",
-        "src/file_three.py",
-    ]
-    mock_cov_instance.analysis.side_effect = [
-        ("", "", [1, 3, 5], ""),  # Missing lines for src/file_one.py
-        ("", "", [2], ""),  # Missing lines for src/file_two.py
-        ("", "", [], ""),  # No missing lines for src/file_three.py
-    ]
+    mock_cov_instance.load.return_value = None
+    mock_cov_instance.combine.return_value = None
+
+    def fake_json_report(outfile):
+        import json
+
+        report_data = {
+            "files": {
+                "src/file_one.py": {"missing_lines": [1, 3, 5]},
+                "src/file_two.py": {"missing_lines": [2]},
+                "src/file_three.py": {"missing_lines": []},
+            }
+        }
+        with open(outfile, "w") as f:
+            json.dump(report_data, f)
+
+    mock_cov_instance.json_report.side_effect = fake_json_report
 
     missing_info = collect_missing_lines("fake.coverage")
 
@@ -100,13 +147,12 @@ def test_collect_missing_lines_multiple_files(mock_coverage_class: MagicMock) ->
     assert missing_info[Path("src/file_one.py")] == [1, 3, 5]
     assert Path("src/file_two.py") in missing_info
     assert missing_info[Path("src/file_two.py")] == [2]
-    mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
+    assert Path("src/file_three.py") not in missing_info
+    mock_coverage_class.assert_called_once_with(data_file="fake.coverage", source=None)
     mock_cov_instance.load.assert_called_once()
-    mock_cov_instance.get_data.assert_called_once()
-    assert mock_cov_instance.analysis.call_count == 3
-    mock_cov_instance.analysis.assert_any_call("src/file_one.py")
-    mock_cov_instance.analysis.assert_any_call("src/file_two.py")
-    mock_cov_instance.analysis.assert_any_call("src/file_three.py")
+    mock_cov_instance.combine.assert_called_once()
+    mock_cov_instance.json_report.assert_called_once()
+    # Removido asserts de get_data e analysis, pois não são mais usados
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
@@ -117,14 +163,22 @@ def test_collect_missing_lines_multiple_files_with_all_missing(
     Tests that collect_missing_lines correctly identifies missing lines for multiple files with all missing lines.
     """
     mock_cov_instance = mock_coverage_class.return_value
-    mock_cov_instance.get_data.return_value.measured_files.return_value = [
-        "src/file_one.py",
-        "src/file_two.py",
-    ]
-    mock_cov_instance.analysis.side_effect = [
-        ("", "", [1, 2, 3], ""),  # Missing lines for src/file_one.py
-        ("", "", [4, 5], ""),  # Missing lines for src/file_two.py
-    ]
+    mock_cov_instance.load.return_value = None
+    mock_cov_instance.combine.return_value = None
+
+    def fake_json_report(outfile):
+        import json
+
+        report_data = {
+            "files": {
+                "src/file_one.py": {"missing_lines": [1, 2, 3]},
+                "src/file_two.py": {"missing_lines": [4, 5]},
+            }
+        }
+        with open(outfile, "w") as f:
+            json.dump(report_data, f)
+
+    mock_cov_instance.json_report.side_effect = fake_json_report
 
     missing_info = collect_missing_lines("fake.coverage")
 
@@ -133,12 +187,10 @@ def test_collect_missing_lines_multiple_files_with_all_missing(
     assert missing_info[Path("src/file_one.py")] == [1, 2, 3]
     assert Path("src/file_two.py") in missing_info
     assert missing_info[Path("src/file_two.py")] == [4, 5]
-    mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
+    mock_coverage_class.assert_called_once_with(data_file="fake.coverage", source=None)
     mock_cov_instance.load.assert_called_once()
-    mock_cov_instance.get_data.assert_called_once()
-    assert mock_cov_instance.analysis.call_count == 2
-    mock_cov_instance.analysis.assert_any_call("src/file_one.py")
-    mock_cov_instance.analysis.assert_any_call("src/file_two.py")
+    mock_cov_instance.combine.assert_called_once()
+    mock_cov_instance.json_report.assert_called_once()
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
@@ -149,16 +201,23 @@ def test_collect_missing_lines_multiple_files_with_some_missing(
     Tests that collect_missing_lines correctly identifies missing lines for multiple files with some missing lines.
     """
     mock_cov_instance = mock_coverage_class.return_value
-    mock_cov_instance.get_data.return_value.measured_files.return_value = [
-        "src/file_a.py",
-        "src/file_b.py",
-        "src/file_c.py",
-    ]
-    mock_cov_instance.analysis.side_effect = [
-        ("", "", [12, 13, 14], ""),  # Missing lines for src/file_a.py
-        ("", "", [], ""),  # No missing lines for src/file_b.py
-        ("", "", [15, 16, 17, 18], ""),  # Missing lines for src/file_c.py
-    ]
+    mock_cov_instance.load.return_value = None
+    mock_cov_instance.combine.return_value = None
+
+    def fake_json_report(outfile):
+        import json
+
+        report_data = {
+            "files": {
+                "src/file_a.py": {"missing_lines": [12, 13, 14]},
+                "src/file_b.py": {"missing_lines": []},
+                "src/file_c.py": {"missing_lines": [15, 16, 17, 18]},
+            }
+        }
+        with open(outfile, "w") as f:
+            json.dump(report_data, f)
+
+    mock_cov_instance.json_report.side_effect = fake_json_report
 
     missing_info = collect_missing_lines("fake.coverage")
 
@@ -167,13 +226,11 @@ def test_collect_missing_lines_multiple_files_with_some_missing(
     assert missing_info[Path("src/file_a.py")] == [12, 13, 14]
     assert Path("src/file_c.py") in missing_info
     assert missing_info[Path("src/file_c.py")] == [15, 16, 17, 18]
-    mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
+    assert Path("src/file_b.py") not in missing_info
+    mock_coverage_class.assert_called_once_with(data_file="fake.coverage", source=None)
     mock_cov_instance.load.assert_called_once()
-    mock_cov_instance.get_data.assert_called_once()
-    assert mock_cov_instance.analysis.call_count == 3
-    mock_cov_instance.analysis.assert_any_call("src/file_a.py")
-    mock_cov_instance.analysis.assert_any_call("src/file_b.py")
-    mock_cov_instance.analysis.assert_any_call("src/file_c.py")
+    mock_cov_instance.combine.assert_called_once()
+    mock_cov_instance.json_report.assert_called_once()
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
@@ -184,18 +241,31 @@ def test_collect_missing_lines_with_multiple_missing_lines(
     Tests that collect_missing_lines correctly identifies multiple missing lines in a single file.
     """
     mock_cov_instance = mock_coverage_class.return_value
-    mock_cov_instance.get_data.return_value.measured_files.return_value = ["src/multiple_missing.py"]
-    mock_cov_instance.analysis.return_value = ("", "", [12, 13, 14, 15, 16], "")
+    mock_cov_instance.load.return_value = None
+    mock_cov_instance.combine.return_value = None
+
+    def fake_json_report(outfile):
+        import json
+
+        report_data = {
+            "files": {
+                "src/multiple_missing.py": {"missing_lines": [12, 13, 14, 15, 16]},
+            }
+        }
+        with open(outfile, "w") as f:
+            json.dump(report_data, f)
+
+    mock_cov_instance.json_report.side_effect = fake_json_report
 
     missing_info = collect_missing_lines("fake.coverage")
 
     assert len(missing_info) == 1
     assert Path("src/multiple_missing.py") in missing_info
     assert missing_info[Path("src/multiple_missing.py")] == [12, 13, 14, 15, 16]
-    mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
+    mock_coverage_class.assert_called_once_with(data_file="fake.coverage", source=None)
     mock_cov_instance.load.assert_called_once()
-    mock_cov_instance.get_data.assert_called_once()
-    mock_cov_instance.analysis.assert_called_once_with("src/multiple_missing.py")
+    mock_cov_instance.combine.assert_called_once()
+    mock_cov_instance.json_report.assert_called_once()
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
@@ -206,14 +276,25 @@ def test_collect_missing_lines_with_no_measured_files(
     Tests that collect_missing_lines returns an empty dict when there are no measured files.
     """
     mock_cov_instance = mock_coverage_class.return_value
-    mock_cov_instance.get_data.return_value.measured_files.return_value = []
+    mock_cov_instance.load.return_value = None
+    mock_cov_instance.combine.return_value = None
+
+    def fake_json_report(outfile):
+        import json
+
+        report_data = {"files": {}}
+        with open(outfile, "w") as f:
+            json.dump(report_data, f)
+
+    mock_cov_instance.json_report.side_effect = fake_json_report
 
     missing_info = collect_missing_lines("fake.coverage")
 
     assert len(missing_info) == 0
-    mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
+    mock_coverage_class.assert_called_once_with(data_file="fake.coverage", source=None)
     mock_cov_instance.load.assert_called_once()
-    mock_cov_instance.get_data.assert_called_once()
+    mock_cov_instance.combine.assert_called_once()
+    mock_cov_instance.json_report.assert_called_once()
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
@@ -224,32 +305,31 @@ def test_collect_missing_lines_with_specific_missing_lines(
     Tests that collect_missing_lines correctly identifies specific missing lines in a file.
     """
     mock_cov_instance = mock_coverage_class.return_value
-    mock_cov_instance.get_data.return_value.measured_files.return_value = ["src/specific_missing.py"]
-    mock_cov_instance.analysis.return_value = (
-        "",
-        "",
-        [12, 13, 14, 15, 16, 17, 18, 19],
-        "",
-    )
+    mock_cov_instance.load.return_value = None
+    mock_cov_instance.combine.return_value = None
+
+    def fake_json_report(outfile):
+        import json
+
+        report_data = {
+            "files": {
+                "src/specific_missing.py": {"missing_lines": [12, 13, 14, 15, 16, 17, 18, 19]},
+            }
+        }
+        with open(outfile, "w") as f:
+            json.dump(report_data, f)
+
+    mock_cov_instance.json_report.side_effect = fake_json_report
 
     missing_info = collect_missing_lines("fake.coverage")
 
     assert len(missing_info) == 1
     assert Path("src/specific_missing.py") in missing_info
-    assert missing_info[Path("src/specific_missing.py")] == [
-        12,
-        13,
-        14,
-        15,
-        16,
-        17,
-        18,
-        19,
-    ]
-    mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
+    assert missing_info[Path("src/specific_missing.py")] == [12, 13, 14, 15, 16, 17, 18, 19]
+    mock_coverage_class.assert_called_once_with(data_file="fake.coverage", source=None)
     mock_cov_instance.load.assert_called_once()
-    mock_cov_instance.get_data.assert_called_once()
-    mock_cov_instance.analysis.assert_called_once_with("src/specific_missing.py")
+    mock_cov_instance.combine.assert_called_once()
+    mock_cov_instance.json_report.assert_called_once()
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
@@ -260,40 +340,33 @@ def test_collect_missing_lines_with_all_lines_missing(
     Tests that collect_missing_lines correctly identifies all missing lines in a file.
     """
     mock_cov_instance = mock_coverage_class.return_value
-    mock_cov_instance.get_data.return_value.measured_files.return_value = ["src/all_missing.py"]
-    mock_cov_instance.analysis.return_value = (
-        "",
-        "",
-        [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31],
-        "",
-    )
+    mock_cov_instance.load.return_value = None
+    mock_cov_instance.combine.return_value = None
+
+    def fake_json_report(outfile):
+        import json
+
+        report_data = {
+            "files": {
+                "src/all_missing.py": {
+                    "missing_lines": [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31]
+                },
+            }
+        }
+        with open(outfile, "w") as f:
+            json.dump(report_data, f)
+
+    mock_cov_instance.json_report.side_effect = fake_json_report
 
     missing_info = collect_missing_lines("fake.coverage")
 
     assert len(missing_info) == 1
     assert Path("src/all_missing.py") in missing_info
-    assert missing_info[Path("src/all_missing.py")] == [
-        12,
-        13,
-        14,
-        15,
-        16,
-        17,
-        18,
-        19,
-        23,
-        24,
-        25,
-        26,
-        27,
-        29,
-        30,
-        31,
-    ]
-    mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
+    assert missing_info[Path("src/all_missing.py")] == [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31]
+    mock_coverage_class.assert_called_once_with(data_file="fake.coverage", source=None)
     mock_cov_instance.load.assert_called_once()
-    mock_cov_instance.get_data.assert_called_once()
-    mock_cov_instance.analysis.assert_called_once_with("src/all_missing.py")
+    mock_cov_instance.combine.assert_called_once()
+    mock_cov_instance.json_report.assert_called_once()
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
@@ -304,13 +377,23 @@ def test_collect_missing_lines_with_all_lines_missing_in_file(
     Tests that collect_missing_lines correctly identifies all missing lines in a specific file.
     """
     mock_cov_instance = mock_coverage_class.return_value
-    mock_cov_instance.get_data.return_value.measured_files.return_value = ["src/another_all_missing.py"]
-    mock_cov_instance.analysis.return_value = (
-        "",
-        "",
-        [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31],
-        "",
-    )
+    mock_cov_instance.load.return_value = None
+    mock_cov_instance.combine.return_value = None
+
+    def fake_json_report(outfile):
+        import json
+
+        report_data = {
+            "files": {
+                "src/another_all_missing.py": {
+                    "missing_lines": [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31]
+                },
+            }
+        }
+        with open(outfile, "w") as f:
+            json.dump(report_data, f)
+
+    mock_cov_instance.json_report.side_effect = fake_json_report
 
     missing_info = collect_missing_lines("fake.coverage")
 
@@ -334,10 +417,10 @@ def test_collect_missing_lines_with_all_lines_missing_in_file(
         30,
         31,
     ]
-    mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
+    mock_coverage_class.assert_called_once_with(data_file="fake.coverage", source=None)
     mock_cov_instance.load.assert_called_once()
-    mock_cov_instance.get_data.assert_called_once()
-    mock_cov_instance.analysis.assert_called_once_with("src/another_all_missing.py")
+    mock_cov_instance.combine.assert_called_once()
+    mock_cov_instance.json_report.assert_called_once()
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
@@ -348,14 +431,22 @@ def test_collect_missing_lines_with_specific_missing_lines_multiple(
     Tests that collect_missing_lines correctly identifies specific missing lines in multiple files.
     """
     mock_cov_instance = mock_coverage_class.return_value
-    mock_cov_instance.get_data.return_value.measured_files.return_value = [
-        "src/file_one.py",
-        "src/file_two.py",
-    ]
-    mock_cov_instance.analysis.side_effect = [
-        ("", "", [12, 13, 14], ""),  # Missing lines for src/file_one.py
-        ("", "", [15, 16, 17, 18, 19], ""),  # Missing lines for src/file_two.py
-    ]
+    mock_cov_instance.load.return_value = None
+    mock_cov_instance.combine.return_value = None
+
+    def fake_json_report(outfile):
+        import json
+
+        report_data = {
+            "files": {
+                "src/file_one.py": {"missing_lines": [12, 13, 14]},
+                "src/file_two.py": {"missing_lines": [15, 16, 17, 18, 19]},
+            }
+        }
+        with open(outfile, "w") as f:
+            json.dump(report_data, f)
+
+    mock_cov_instance.json_report.side_effect = fake_json_report
 
     missing_info = collect_missing_lines("fake.coverage")
 
@@ -364,12 +455,10 @@ def test_collect_missing_lines_with_specific_missing_lines_multiple(
     assert missing_info[Path("src/file_one.py")] == [12, 13, 14]
     assert Path("src/file_two.py") in missing_info
     assert missing_info[Path("src/file_two.py")] == [15, 16, 17, 18, 19]
-    mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
+    mock_coverage_class.assert_called_once_with(data_file="fake.coverage", source=None)
     mock_cov_instance.load.assert_called_once()
-    mock_cov_instance.get_data.assert_called_once()
-    assert mock_cov_instance.analysis.call_count == 2
-    mock_cov_instance.analysis.assert_any_call("src/file_one.py")
-    mock_cov_instance.analysis.assert_any_call("src/file_two.py")
+    mock_cov_instance.combine.assert_called_once()
+    mock_cov_instance.json_report.assert_called_once()
 
 
 @patch("ai_unit_test.coverage_helper.Coverage")
@@ -380,69 +469,31 @@ def test_collect_missing_lines_with_all_lines_missing_in_file_multiple(
     Tests that collect_missing_lines correctly identifies all missing lines in multiple files.
     """
     mock_cov_instance = mock_coverage_class.return_value
-    mock_cov_instance.get_data.return_value.measured_files.return_value = [
-        "src/file_one.py",
-        "src/file_two.py",
-    ]
-    mock_cov_instance.analysis.side_effect = [
-        (
-            "",
-            "",
-            [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31],
-            "",
-        ),  # Missing lines for src/file_one.py
-        (
-            "",
-            "",
-            [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31],
-            "",
-        ),  # Missing lines for src/file_two.py
-    ]
+    mock_cov_instance.load.return_value = None
+    mock_cov_instance.combine.return_value = None
+
+    def fake_json_report(outfile):
+        import json
+
+        report_data = {
+            "files": {
+                "src/file_one.py": {"missing_lines": [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31]},
+                "src/file_two.py": {"missing_lines": [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31]},
+            }
+        }
+        with open(outfile, "w") as f:
+            json.dump(report_data, f)
+
+    mock_cov_instance.json_report.side_effect = fake_json_report
 
     missing_info = collect_missing_lines("fake.coverage")
 
     assert len(missing_info) == 2
     assert Path("src/file_one.py") in missing_info
-    assert missing_info[Path("src/file_one.py")] == [
-        12,
-        13,
-        14,
-        15,
-        16,
-        17,
-        18,
-        19,
-        23,
-        24,
-        25,
-        26,
-        27,
-        29,
-        30,
-        31,
-    ]
+    assert missing_info[Path("src/file_one.py")] == [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31]
     assert Path("src/file_two.py") in missing_info
-    assert missing_info[Path("src/file_two.py")] == [
-        12,
-        13,
-        14,
-        15,
-        16,
-        17,
-        18,
-        19,
-        23,
-        24,
-        25,
-        26,
-        27,
-        29,
-        30,
-        31,
-    ]
-    mock_coverage_class.assert_called_once_with(data_file="fake.coverage")
+    assert missing_info[Path("src/file_two.py")] == [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31]
+    mock_coverage_class.assert_called_once_with(data_file="fake.coverage", source=None)
     mock_cov_instance.load.assert_called_once()
-    mock_cov_instance.get_data.assert_called_once()
-    assert mock_cov_instance.analysis.call_count == 2
-    mock_cov_instance.analysis.assert_any_call("src/file_one.py")
-    mock_cov_instance.analysis.assert_any_call("src/file_two.py")
+    mock_cov_instance.combine.assert_called_once()
+    mock_cov_instance.json_report.assert_called_once()

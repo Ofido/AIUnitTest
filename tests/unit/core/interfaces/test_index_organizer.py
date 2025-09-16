@@ -1,7 +1,7 @@
 """Test index organizer interface compliance."""
 
 from pathlib import Path
-from typing import Any, Dict, Type
+from typing import Any
 
 import numpy as np
 import pytest
@@ -20,7 +20,9 @@ class TestIndexOrganizerInterface:
             (InMemoryIndexOrganizer, {"max_documents": 1000}),
         ],
     )
-    async def test_organizer_interface_compliance(self, organizer_class: type[IndexOrganizer], config: dict[str, Any]):
+    async def test_organizer_interface_compliance(
+        self, organizer_class: type[IndexOrganizer], config: dict[str, Any]
+    ) -> None:
         """Test that organizer implements all required interface methods."""
 
         organizer = organizer_class(config)
@@ -45,7 +47,7 @@ class TestIndexOrganizerInterface:
 
     async def test_create_and_search_workflow(
         self, sample_embeddings: np.ndarray, sample_metadata: list[dict[str, Any]], temp_dir: Path
-    ):
+    ) -> None:
         """Test complete create and search workflow."""
 
         async with InMemoryIndexOrganizer({"max_documents": 1000}) as organizer:
@@ -76,7 +78,7 @@ class TestIndexOrganizerInterface:
 
     async def test_add_documents_workflow(
         self, sample_embeddings: np.ndarray, sample_metadata: list[dict[str, Any]], temp_dir: Path
-    ):
+    ) -> None:
         """Test adding documents to existing index."""
 
         async with InMemoryIndexOrganizer({"max_documents": 1000}) as organizer:
@@ -98,7 +100,7 @@ class TestIndexOrganizerInterface:
 
     async def test_get_stats_contract(
         self, sample_embeddings: np.ndarray, sample_metadata: list[dict[str, Any]], temp_dir: Path
-    ):
+    ) -> None:
         """Test get_stats method contract."""
 
         async with InMemoryIndexOrganizer({"max_documents": 1000}) as organizer:
@@ -117,7 +119,7 @@ class TestIndexOrganizerInterface:
             assert stats.search_latency_ms >= 0
             assert stats.memory_usage_mb >= 0
 
-    async def test_error_handling_contract(self):
+    async def test_error_handling_contract(self) -> None:
         """Test error handling behavior."""
 
         organizer = InMemoryIndexOrganizer({"max_documents": 1000})

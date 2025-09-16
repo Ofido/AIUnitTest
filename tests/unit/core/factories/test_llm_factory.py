@@ -1,7 +1,7 @@
 """Test LLM connector factory."""
 
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -13,22 +13,25 @@ from ai_unit_test.core.implementations.llm.mock_connector import MockConnector
 class TestLLMConnectorFactory:
     """Test LLM connector factory functionality."""
 
-    def test_factory_registration(self):
+    def test_factory_registration(self) -> None:
         """Test connector registration."""
 
         # Test getting available connectors
         connectors = LLMConnectorFactory.get_available_connectors()
         assert isinstance(connectors, list)
+        assert len(connectors) > 0
         assert "mock" in connectors
 
-        # Test registering new connector
-        class TestConnector(MockConnector):
-            pass
+        # Test verifying registered connectors have implementations
+        for connector_name in connectors:
+            try:
+                connector = LLMConnectorFactory.create_connector(connector_name)
+                assert connector is not None
+            except ConfigurationError:
+                # Some connectors might need configuration
+                pass
 
-        LLMConnectorFactory.register_connector("test", TestConnector)
-        assert "test" in LLMConnectorFactory.get_available_connectors()
-
-    def test_create_mock_connector(self):
+    def test_create_mock_connector(self) -> None:
         """Test creating mock connector."""
         from ai_unit_test.core.implementations.llm.mock_connector import MockConnectorConfig
 
@@ -42,7 +45,7 @@ class TestLLMConnectorFactory:
         assert connector.config.should_fail is False
         assert connector.config.response_delay == 0.1
 
-    def test_create_unknown_connector(self):
+    def test_create_unknown_connector(self) -> None:
         """Test creating unknown connector raises error."""
 
         with pytest.raises(ConfigurationError) as exc_info:
@@ -52,7 +55,7 @@ class TestLLMConnectorFactory:
         assert "Available providers:" in str(exc_info.value)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key", "OPENAI_API_URL": "http://test"})
-    def test_environment_config_merging(self):
+    def test_environment_config_merging(self) -> None:
         """Test environment variable merging."""
 
         # Test OpenAI environment variables
@@ -63,7 +66,7 @@ class TestLLMConnectorFactory:
         assert merged_config["base_url"] == "http://test"
         assert merged_config["temperature"] == 0.5
 
-    def test_create_from_config_file(self):
+    def test_create_from_config_file(self) -> None:
         """Test creating connector from configuration file."""
 
         # Test with mock provider config

@@ -6,6 +6,7 @@ import tempfile
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -140,7 +141,7 @@ class TestCalculator:
 
 
 @pytest.fixture
-def sample_coverage_data(temp_dir: Path) -> dict[str, list]:
+def sample_coverage_data(temp_dir: Path) -> dict[str, list[int]]:
     """Sample coverage data for testing."""
     return {str(temp_dir / "sample_module.py"): [8, 12, 15]}  # Missing lines
 
@@ -167,13 +168,20 @@ def huggingface_test_config() -> dict[str, Any]:
 
 # Async test helpers
 @pytest.fixture
-async def async_test_timeout() -> None:
+async def async_test_timeout() -> float:
     """Timeout for async tests."""
     return 30.0  # 30 seconds
 
 
+@pytest.fixture
+def mock_logger_error() -> Generator[Any]:
+    """Mock logger error for testing."""
+    with patch("ai_unit_test.core.utils.logger.logger.error") as mock:
+        yield mock
+
+
 # Test data validation helpers
-def validate_llm_response(response: object) -> None:
+def validate_llm_response(response: Any) -> None:  # noqa: ANN401
     """Validate LLM response structure."""
     required_fields = ["content", "usage", "model", "finish_reason", "response_time_ms"]
     for field in required_fields:
@@ -184,7 +192,7 @@ def validate_llm_response(response: object) -> None:
     assert "total_tokens" in response.usage
 
 
-def validate_search_results(results: object) -> None:
+def validate_search_results(results: Any) -> None:  # noqa: ANN401
     """Validate search results structure."""
     assert isinstance(results, list)
     for result in results:

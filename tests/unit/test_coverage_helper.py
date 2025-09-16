@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from ai_unit_test.coverage_helper import collect_missing_lines
@@ -18,11 +19,11 @@ def test_collect_missing_lines(mock_coverage_class: MagicMock) -> None:
     mock_cov_instance.combine.return_value = None
 
     # Mock json_report para simular geração do arquivo
-    def fake_json_report(outfile):
+    def fake_json_report(outfile: str) -> None:
         # Simula a criação do arquivo JSON esperado
         import json
 
-        report_data = {
+        report_data: dict[str, Any] = {
             "files": {
                 "src/main.py": {"missing_lines": [2, 4]},
                 "src/another_file.py": {"missing_lines": []},
@@ -34,10 +35,9 @@ def test_collect_missing_lines(mock_coverage_class: MagicMock) -> None:
     mock_cov_instance.json_report.side_effect = fake_json_report
 
     # Simula que o arquivo existe após json_report
-    import builtins
+    # import builtins
 
-    original_open = builtins.open
-
+    # # original_open removed - unused
     # Executa a função
     missing_info = collect_missing_lines("fake.coverage")
 
@@ -61,10 +61,10 @@ def test_collect_missing_lines_no_missing(mock_coverage_class: MagicMock) -> Non
     mock_cov_instance.combine.return_value = None
 
     # Mock json_report para simular arquivo sem linhas faltantes
-    def fake_json_report(outfile):
+    def fake_json_report(outfile: str) -> None:
         import json
 
-        report_data = {
+        report_data: dict[str, Any] = {
             "files": {
                 "src/main.py": {"missing_lines": []},
             }
@@ -92,10 +92,10 @@ def test_collect_missing_lines_single_file(mock_coverage_class: MagicMock) -> No
     mock_cov_instance.load.return_value = None
     mock_cov_instance.combine.return_value = None
 
-    def fake_json_report(outfile):
+    def fake_json_report(outfile: str) -> None:
         import json
 
-        report_data = {
+        report_data: dict[str, Any] = {
             "files": {
                 "src/single_file.py": {"missing_lines": [10, 12]},
             }
@@ -125,10 +125,10 @@ def test_collect_missing_lines_multiple_files(mock_coverage_class: MagicMock) ->
     mock_cov_instance.load.return_value = None
     mock_cov_instance.combine.return_value = None
 
-    def fake_json_report(outfile):
+    def fake_json_report(outfile: str) -> None:
         import json
 
-        report_data = {
+        report_data: dict[str, Any] = {
             "files": {
                 "src/file_one.py": {"missing_lines": [1, 3, 5]},
                 "src/file_two.py": {"missing_lines": [2]},
@@ -166,10 +166,10 @@ def test_collect_missing_lines_multiple_files_with_all_missing(
     mock_cov_instance.load.return_value = None
     mock_cov_instance.combine.return_value = None
 
-    def fake_json_report(outfile):
+    def fake_json_report(outfile: str) -> None:
         import json
 
-        report_data = {
+        report_data: dict[str, Any] = {
             "files": {
                 "src/file_one.py": {"missing_lines": [1, 2, 3]},
                 "src/file_two.py": {"missing_lines": [4, 5]},
@@ -204,10 +204,10 @@ def test_collect_missing_lines_multiple_files_with_some_missing(
     mock_cov_instance.load.return_value = None
     mock_cov_instance.combine.return_value = None
 
-    def fake_json_report(outfile):
+    def fake_json_report(outfile: str) -> None:
         import json
 
-        report_data = {
+        report_data: dict[str, Any] = {
             "files": {
                 "src/file_a.py": {"missing_lines": [12, 13, 14]},
                 "src/file_b.py": {"missing_lines": []},
@@ -244,10 +244,10 @@ def test_collect_missing_lines_with_multiple_missing_lines(
     mock_cov_instance.load.return_value = None
     mock_cov_instance.combine.return_value = None
 
-    def fake_json_report(outfile):
+    def fake_json_report(outfile: str) -> None:
         import json
 
-        report_data = {
+        report_data: dict[str, Any] = {
             "files": {
                 "src/multiple_missing.py": {"missing_lines": [12, 13, 14, 15, 16]},
             }
@@ -279,10 +279,10 @@ def test_collect_missing_lines_with_no_measured_files(
     mock_cov_instance.load.return_value = None
     mock_cov_instance.combine.return_value = None
 
-    def fake_json_report(outfile):
+    def fake_json_report(outfile: str) -> None:
         import json
 
-        report_data = {"files": {}}
+        report_data: dict[str, Any] = {"files": {}}
         with open(outfile, "w") as f:
             json.dump(report_data, f)
 
@@ -308,10 +308,10 @@ def test_collect_missing_lines_with_specific_missing_lines(
     mock_cov_instance.load.return_value = None
     mock_cov_instance.combine.return_value = None
 
-    def fake_json_report(outfile):
+    def fake_json_report(outfile: str) -> None:
         import json
 
-        report_data = {
+        report_data: dict[str, Any] = {
             "files": {
                 "src/specific_missing.py": {"missing_lines": [12, 13, 14, 15, 16, 17, 18, 19]},
             }
@@ -343,10 +343,10 @@ def test_collect_missing_lines_with_all_lines_missing(
     mock_cov_instance.load.return_value = None
     mock_cov_instance.combine.return_value = None
 
-    def fake_json_report(outfile):
+    def fake_json_report(outfile: str) -> None:
         import json
 
-        report_data = {
+        report_data: dict[str, Any] = {
             "files": {
                 "src/all_missing.py": {
                     "missing_lines": [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31]
@@ -380,10 +380,10 @@ def test_collect_missing_lines_with_all_lines_missing_in_file(
     mock_cov_instance.load.return_value = None
     mock_cov_instance.combine.return_value = None
 
-    def fake_json_report(outfile):
+    def fake_json_report(outfile: str) -> None:
         import json
 
-        report_data = {
+        report_data: dict[str, Any] = {
             "files": {
                 "src/another_all_missing.py": {
                     "missing_lines": [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31]
@@ -434,10 +434,10 @@ def test_collect_missing_lines_with_specific_missing_lines_multiple(
     mock_cov_instance.load.return_value = None
     mock_cov_instance.combine.return_value = None
 
-    def fake_json_report(outfile):
+    def fake_json_report(outfile: str) -> None:
         import json
 
-        report_data = {
+        report_data: dict[str, Any] = {
             "files": {
                 "src/file_one.py": {"missing_lines": [12, 13, 14]},
                 "src/file_two.py": {"missing_lines": [15, 16, 17, 18, 19]},
@@ -472,10 +472,10 @@ def test_collect_missing_lines_with_all_lines_missing_in_file_multiple(
     mock_cov_instance.load.return_value = None
     mock_cov_instance.combine.return_value = None
 
-    def fake_json_report(outfile):
+    def fake_json_report(outfile: str) -> None:
         import json
 
-        report_data = {
+        report_data: dict[str, Any] = {
             "files": {
                 "src/file_one.py": {"missing_lines": [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31]},
                 "src/file_two.py": {"missing_lines": [12, 13, 14, 15, 16, 17, 18, 19, 23, 24, 25, 26, 27, 29, 30, 31]},

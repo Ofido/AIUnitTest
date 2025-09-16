@@ -38,7 +38,7 @@ class Stack:
 class Queue:
     """A simple queue implementation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize empty queue."""
         self._items: list[object] = []
 

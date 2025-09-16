@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import psutil
@@ -14,7 +15,7 @@ class TestMemoryUsage:
     """Test memory usage."""
 
     @pytest.mark.asyncio
-    async def test_memory_usage(self, performance_config: dict, temp_dir: Path) -> None:
+    async def test_memory_usage(self, performance_config: dict[str, Any], temp_dir: Path) -> None:
         """Test that the memory usage is within a reasonable range."""
         # Arrange
         max_memory_usage = 1024 * 1024 * 1024  # 1GB

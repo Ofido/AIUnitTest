@@ -2,6 +2,7 @@
 
 import time
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -13,7 +14,7 @@ class TestSearchPerformance:
     """Test search performance."""
 
     @pytest.mark.asyncio
-    async def test_search_performance(self, performance_config: dict, temp_dir: Path) -> None:
+    async def test_search_performance(self, performance_config: dict[str, Any], temp_dir: Path) -> None:
         """Test that the search performance is within a reasonable range."""
         # Arrange
         max_response_time = performance_config["max_response_time_ms"] / 1000.0

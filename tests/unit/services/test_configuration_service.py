@@ -1,5 +1,6 @@
 """Test configuration service."""
 
+from typing import Any
 from unittest.mock import mock_open, patch
 
 import pytest
@@ -11,7 +12,7 @@ from ai_unit_test.services.configuration_service import ConfigurationService
 class TestConfigurationService:
     """Test configuration service functionality."""
 
-    def test_init(self):
+    def test_init(self) -> None:
         """Test service initialization."""
         service = ConfigurationService()
         assert service.config == {}
@@ -21,7 +22,7 @@ class TestConfigurationService:
         service = ConfigurationService(config)
         assert service.config == config
 
-    def test_load_pyproject_config_missing_file(self):
+    def test_load_pyproject_config_missing_file(self) -> None:
         """Test loading config when file doesn't exist."""
         service = ConfigurationService()
 
@@ -31,7 +32,7 @@ class TestConfigurationService:
         assert config == {}
         assert service._pyproject_cache == {}
 
-    def test_load_pyproject_config_success(self, sample_pyproject_config):
+    def test_load_pyproject_config_success(self, sample_pyproject_config: dict[str, Any]) -> None:
         """Test successful config loading."""
         service = ConfigurationService()
 
@@ -60,7 +61,7 @@ model = "mock-model"
         config2 = service.load_pyproject_config()
         assert config2 is config  # Same object due to caching
 
-    def test_load_pyproject_config_invalid_toml(self):
+    def test_load_pyproject_config_invalid_toml(self) -> None:
         """Test handling of invalid TOML file."""
         service = ConfigurationService()
 
@@ -73,7 +74,7 @@ model = "mock-model"
 
         assert "Failed to load pyproject.toml" in str(exc_info.value)
 
-    def test_extract_source_configuration(self, sample_pyproject_config):
+    def test_extract_source_configuration(self, sample_pyproject_config: dict[str, Any]) -> None:
         """Test extracting source configuration."""
         service = ConfigurationService()
 
@@ -83,7 +84,7 @@ model = "mock-model"
         assert tests_folder == "tests"
         assert coverage_path == ".coverage"
 
-    def test_extract_source_configuration_missing_values(self):
+    def test_extract_source_configuration_missing_values(self) -> None:
         """Test extracting config with missing values."""
         service = ConfigurationService()
 
@@ -94,7 +95,7 @@ model = "mock-model"
         assert tests_folder == "tests"  # Fallback value
         assert coverage_path is None
 
-    def test_resolve_paths_from_config_auto_discovery(self, sample_pyproject_config):
+    def test_resolve_paths_from_config_auto_discovery(self, sample_pyproject_config: dict[str, Any]) -> None:
         """Test path resolution with auto-discovery."""
         service = ConfigurationService()
         service._pyproject_cache = sample_pyproject_config
@@ -105,7 +106,7 @@ model = "mock-model"
         assert tests_folder == "tests"
         assert coverage_file == ".coverage"
 
-    def test_resolve_paths_validation_errors(self):
+    def test_resolve_paths_validation_errors(self) -> None:
         """Test path resolution validation errors."""
         service = ConfigurationService()
         service._pyproject_cache = {}
@@ -122,7 +123,7 @@ model = "mock-model"
                     service.resolve_paths_from_config(folders=["src"], tests_folder=None, auto_discovery=False)
                 assert "Tests folder not defined" in str(exc_info.value)
 
-    def test_get_llm_config(self, sample_pyproject_config):
+    def test_get_llm_config(self, sample_pyproject_config: dict[str, Any]) -> None:
         """Test getting LLM configuration."""
         service = ConfigurationService()
 
@@ -132,7 +133,7 @@ model = "mock-model"
         assert llm_config["model"] == "mock-model"
         assert llm_config["temperature"] == 0.1
 
-    def test_get_indexing_config(self, sample_pyproject_config):
+    def test_get_indexing_config(self, sample_pyproject_config: dict[str, Any]) -> None:
         """Test getting indexing configuration."""
         service = ConfigurationService()
 
@@ -141,11 +142,11 @@ model = "mock-model"
         assert indexing_config["backend"] == "memory"
         assert indexing_config["index_directory"] == "data/test_index"
 
-    def test_validate_environment(self):
+    def test_validate_environment(self) -> None:
         """Test environment validation."""
         service = ConfigurationService()
 
-        def exists_side_effect(self):
+        def exists_side_effect(_: str) -> bool:
             return str(self) == "pyproject.toml"
 
         with patch("pathlib.Path.exists", new=exists_side_effect):

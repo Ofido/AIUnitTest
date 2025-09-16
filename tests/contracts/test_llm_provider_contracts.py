@@ -1,6 +1,7 @@
 """Test LLM provider contracts."""
 
 import os
+from typing import Any
 
 import pytest
 
@@ -16,7 +17,7 @@ from ai_unit_test.core.interfaces.llm_connector import LLMRequest
 class TestOpenAIContract:
     """Test OpenAI API contract."""
 
-    async def test_openai_contract(self, openai_test_config: dict) -> None:
+    async def test_openai_contract(self, openai_test_config: dict[str, Any]) -> None:
         """Test that the OpenAI API returns the expected response."""
         # Arrange
         config = {
@@ -46,7 +47,7 @@ class TestHuggingFaceContract:
     """Test HuggingFace API contract."""
 
     @pytest.mark.asyncio
-    async def test_huggingface_contract(self, huggingface_test_config: dict) -> None:
+    async def test_huggingface_contract(self, huggingface_test_config: dict[str, Any]) -> None:
         """Test that the HuggingFace API returns the expected response."""
         # Arrange
         config = {

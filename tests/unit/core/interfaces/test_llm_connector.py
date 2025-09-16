@@ -1,14 +1,12 @@
 """Test LLM connector interface compliance."""
 
-import asyncio
-from typing import Any, Dict, Type
-from unittest.mock import AsyncMock, patch
+from typing import Any
 
 import pytest
 
-from ai_unit_test.core.exceptions import LLMConnectionError, LLMProviderError
+from ai_unit_test.core.exceptions import LLMConnectionError
 from ai_unit_test.core.implementations.llm.huggingface_connector import HuggingFaceConnector
-from ai_unit_test.core.implementations.llm.mock_connector import MockConnector
+from ai_unit_test.core.implementations.llm.mock_connector import MockConnector, MockConnectorConfig
 from ai_unit_test.core.implementations.llm.openai_connector import OpenAIConnector
 from ai_unit_test.core.interfaces.llm_connector import LLMConnector, LLMRequest, LLMResponse
 
@@ -24,7 +22,9 @@ class TestLLMConnectorInterface:
             (HuggingFaceConnector, {"model": "gpt2", "use_api": False}),
         ],
     )
-    async def test_connector_interface_compliance(self, connector_class: type[LLMConnector], config: dict[str, Any]):
+    async def test_connector_interface_compliance(
+        self, connector_class: type[LLMConnector[MockConnectorConfig]], config: dict[str, Any]
+    ) -> None:
         """Test that connector implements all required interface methods."""
 
         # Test instantiation
@@ -56,7 +56,9 @@ class TestLLMConnectorInterface:
             (MockConnector, {"should_fail": False}),
         ],
     )
-    async def test_generate_response_contract(self, connector_class: type[LLMConnector], config: dict[str, Any]):
+    async def test_generate_response_contract(
+        self, connector_class: type[LLMConnector[MockConnectorConfig]], config: dict[str, Any]
+    ) -> None:
         """Test generate_response method contract."""
 
         async with connector_class(config) as connector:
@@ -82,7 +84,9 @@ class TestLLMConnectorInterface:
             (MockConnector, {"should_fail": False}),
         ],
     )
-    async def test_generate_stream_contract(self, connector_class: type[LLMConnector], config: dict[str, Any]):
+    async def test_generate_stream_contract(
+        self, connector_class: type[LLMConnector[MockConnectorConfig]], config: dict[str, Any]
+    ) -> None:
         """Test generate_stream method contract."""
 
         async with connector_class(config) as connector:
@@ -102,7 +106,7 @@ class TestLLMConnectorInterface:
             full_response = "".join(chunks)
             assert len(full_response) > 0
 
-    async def test_error_handling_contract(self):
+    async def test_error_handling_contract(self) -> None:
         """Test error handling behavior."""
 
         # Test initialization failure
@@ -118,10 +122,10 @@ class TestLLMConnectorInterface:
 
         request = LLMRequest(system_message="Test", user_message="Test", model="test", temperature=0.1)
 
-        with pytest.raises(Exception):  # Should raise some exception
+        with pytest.raises((LLMConnectionError, Exception)):
             await failing_connector.generate_response(request)
 
-    async def test_health_check_contract(self):
+    async def test_health_check_contract(self) -> None:
         """Test health check behavior."""
 
         # Healthy connector
@@ -135,7 +139,7 @@ class TestLLMConnectorInterface:
         health = await unhealthy_connector.health_check()
         assert health is False
 
-    async def test_get_available_models_contract(self):
+    async def test_get_available_models_contract(self) -> None:
         """Test get_available_models behavior."""
 
         connector = MockConnector({"should_fail": False})
@@ -145,7 +149,7 @@ class TestLLMConnectorInterface:
         assert all(isinstance(model, str) for model in models)
         assert len(models) > 0
 
-    async def test_get_connector_info_contract(self):
+    async def test_get_connector_info_contract(self) -> None:
         """Test get_connector_info behavior."""
 
         connector = MockConnector({"should_fail": False})

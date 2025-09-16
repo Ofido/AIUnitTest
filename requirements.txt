@@ -22,3 +22,4 @@ scikit-learn
 joblib
 joblib-stubs
 psutil
+types-psutil

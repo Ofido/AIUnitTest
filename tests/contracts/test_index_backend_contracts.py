@@ -63,4 +63,4 @@ class TestSklearnContract:
 
             # Assert
             assert len(results) == 3
-            assert results[0].document_id == organizer.doc_ids[0]  # pyright: ignore[reportAttributeAccessIssue]
+            assert results[0].document_id == organizer.doc_ids[0]  # type: ignore

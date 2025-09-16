@@ -1,6 +1,4 @@
-"""String utility functions for testing."""
-
-from typing import List, Optional
+"""String utility functions for the fake project."""
 
 
 def reverse_string(text: str) -> str:

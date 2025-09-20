@@ -70,6 +70,9 @@ class LLMConnectorFactory:
         if provider in merged_config:
             del merged_config[provider]
 
+        if "provider" in merged_config:
+            del merged_config["provider"]
+
         return cls.create_connector(provider, merged_config)
 
     @classmethod

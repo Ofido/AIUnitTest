@@ -168,3 +168,6 @@ where = ["src"]
 
 [tool.ai-unit-test]
 test-patterns = ["test_*.py", "*_test.py"]
+
+[tool.ai-unit-test.llm]
+provider = "openai"

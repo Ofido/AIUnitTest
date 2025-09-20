@@ -146,8 +146,8 @@ model = "mock-model"
         """Test environment validation."""
         service = ConfigurationService()
 
-        def exists_side_effect(_: str) -> bool:
-            return str(self) == "pyproject.toml"
+        def exists_side_effect(path: str) -> bool:
+            return str(path) == "pyproject.toml"
 
         with patch("pathlib.Path.exists", new=exists_side_effect):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True):

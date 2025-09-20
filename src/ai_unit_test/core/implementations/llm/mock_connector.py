@@ -27,7 +27,6 @@ class MockConnectorConfig:
     model: str | None = None
     rate_limit: int = 60
     models_cache_ttl: float = 300.0
-    provider: str | None = None
     temperature: float = 0.5
     max_retries: int = 3
     retry_delay: float = 1.0

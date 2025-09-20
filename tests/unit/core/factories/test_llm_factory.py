@@ -85,7 +85,7 @@ class TestLLMConnectorFactory:
 
         connector = LLMConnectorFactory.create_from_config_file(config)
         assert isinstance(connector, MockConnector)
-        assert connector.config.provider == "mock"
+        assert connector.get_connector_info()["provider"] == "mock"
         assert connector.config.model == "mock-model"
         assert connector.config.temperature == 0.2
         assert connector.config.should_fail is False

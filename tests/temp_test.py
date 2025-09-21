@@ -1,8 +1,11 @@
+"""Temporary test file for FAISS integration."""
+
 import faiss
 import numpy as np
 
 
 def test_faiss() -> None:
+    """Test FAISS index creation and search functionality."""
     d = 64  # dimension
     nb = 100000  # database size
     nq = 10000  # nb of queries

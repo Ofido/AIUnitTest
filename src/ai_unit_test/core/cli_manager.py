@@ -7,11 +7,11 @@ from ai_unit_test.main import main as main_callback
 
 
 class CLIManager:
-    """Manages the Typer CLI application."""
+    """Manage the Typer CLI application."""
 
     def __init__(self, orchestrator: SystemOrchestrator) -> None:
         """
-        Initializes the CLIManager.
+        Initialize the CLIManager.
 
         Args:
             orchestrator: The system orchestrator.
@@ -22,7 +22,7 @@ class CLIManager:
         self._register_commands()
 
     def _register_commands(self) -> None:
-        """Registers CLI commands with the Typer app."""
+        """Register CLI commands with the Typer app."""
         from ai_unit_test.cli import create_index, generate_tests, health_check
 
         self.app.command()(generate_tests)
@@ -30,5 +30,5 @@ class CLIManager:
         self.app.command()(health_check)
 
     def run(self) -> None:
-        """Runs the CLI application."""
+        """Run the CLI application."""
         self.app()

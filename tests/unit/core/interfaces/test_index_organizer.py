@@ -15,7 +15,7 @@ class TestIndexOrganizerInterface:
     """Test that all index organizers implement the interface correctly."""
 
     @pytest.mark.parametrize(
-        "organizer_class,config",
+        ("organizer_class", "config"),
         [
             (InMemoryIndexOrganizer, {"max_documents": 1000}),
         ],
@@ -24,7 +24,6 @@ class TestIndexOrganizerInterface:
         self, organizer_class: type[IndexOrganizer], config: dict[str, Any]
     ) -> None:
         """Test that organizer implements all required interface methods."""
-
         organizer = organizer_class(config)
         assert isinstance(organizer, IndexOrganizer)
 
@@ -49,7 +48,6 @@ class TestIndexOrganizerInterface:
         self, sample_embeddings: np.ndarray, sample_metadata: list[dict[str, Any]], temp_dir: Path
     ) -> None:
         """Test complete create and search workflow."""
-
         async with InMemoryIndexOrganizer({"max_documents": 1000}) as organizer:
             # Create index
             index_path = temp_dir / "test_index"
@@ -80,7 +78,6 @@ class TestIndexOrganizerInterface:
         self, sample_embeddings: np.ndarray, sample_metadata: list[dict[str, Any]], temp_dir: Path
     ) -> None:
         """Test adding documents to existing index."""
-
         async with InMemoryIndexOrganizer({"max_documents": 1000}) as organizer:
             # Create initial index
             index_path = temp_dir / "test_index"
@@ -102,7 +99,6 @@ class TestIndexOrganizerInterface:
         self, sample_embeddings: np.ndarray, sample_metadata: list[dict[str, Any]], temp_dir: Path
     ) -> None:
         """Test get_stats method contract."""
-
         async with InMemoryIndexOrganizer({"max_documents": 1000}) as organizer:
             index_path = temp_dir / "test_index"
             await organizer.create_index(sample_embeddings, sample_metadata, index_path, "test-model")
@@ -121,13 +117,11 @@ class TestIndexOrganizerInterface:
 
     async def test_error_handling_contract(self) -> None:
         """Test error handling behavior."""
-
         organizer = InMemoryIndexOrganizer({"max_documents": 1000})
 
         # Test search without loading index
         with pytest.raises(IndexError):
-            query = np.random.random((1, 384)).astype(np.float32)
-            await organizer.search(query)
+            await organizer.search(np.random.random((1, 384)).astype(np.float32))
 
         # Test getting info without loading index
         with pytest.raises(IndexError):

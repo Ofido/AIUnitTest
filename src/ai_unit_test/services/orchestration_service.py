@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Chunk:
+    """Represents a chunk of source code."""
+
     file_path: str
     start_line: int
     end_line: int
@@ -27,6 +29,8 @@ class Chunk:
 
 @dataclass
 class ConfigHealth:
+    """Represents the health status of the configuration."""
+
     healthy: bool
     pyproject_loaded: bool = False
     environment: EnvironmentStatus | None = None
@@ -36,6 +40,8 @@ class ConfigHealth:
 
 @dataclass
 class LlmHealth:
+    """Represents the health status of the LLM connector."""
+
     healthy: bool
     timestamp: float | None = None
     connector_info: dict[str, Any] | None = None
@@ -44,6 +50,8 @@ class LlmHealth:
 
 @dataclass
 class IndexHealth:
+    """Represents the health status of the indexing service."""
+
     healthy: bool
     available_backends: list[str] | None = None
     error: str | None = None
@@ -51,6 +59,8 @@ class IndexHealth:
 
 @dataclass
 class HealthStatusChecks:
+    """Container for various health check statuses."""
+
     config: ConfigHealth | None = None
     llm: LlmHealth | None = None
     indexing: IndexHealth | None = None
@@ -58,6 +68,8 @@ class HealthStatusChecks:
 
 @dataclass
 class HealthStatus:
+    """Overall health status of the system."""
+
     status: str
     timestamp: float
     checks: HealthStatusChecks = field(default_factory=HealthStatusChecks)
@@ -69,6 +81,12 @@ class OrchestrationService(BaseService):
     """Service for orchestrating complex AI Unit Test workflows."""
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
+        """
+        Initialize the OrchestrationService.
+
+        Args:
+            config: Optional configuration dictionary.
+        """
         super().__init__(config)
         self.config_service = ConfigurationService(config)
         self.test_service = None
@@ -85,7 +103,6 @@ class OrchestrationService(BaseService):
         auto_discovery: bool = False,
     ) -> dict[str, Any]:
         """Run complete test generation workflow."""
-
         workflow_start_time = asyncio.get_event_loop().time()
 
         try:
@@ -146,7 +163,6 @@ class OrchestrationService(BaseService):
         force_rebuild: bool = False,
     ) -> dict[str, Any]:
         """Run index creation workflow."""
-
         self.logger.info("Starting index creation workflow")
         workflow_start_time = asyncio.get_event_loop().time()
 
@@ -280,7 +296,6 @@ class OrchestrationService(BaseService):
 
     async def run_health_check_workflow(self) -> HealthStatus:
         """Run comprehensive system health check."""
-
         self.logger.info("Running health check workflow")
 
         health_status: HealthStatus = HealthStatus(

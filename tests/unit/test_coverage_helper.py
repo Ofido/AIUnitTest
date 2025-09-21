@@ -1,3 +1,5 @@
+"""Test cases for the coverage helper module."""
+
 import logging
 from pathlib import Path
 from typing import Any
@@ -10,9 +12,7 @@ logger = logging.getLogger(__name__)
 
 @patch("ai_unit_test.coverage_helper.Coverage")
 def test_collect_missing_lines(mock_coverage_class: MagicMock) -> None:
-    """
-    Tests that collect_missing_lines correctly identifies missing lines.
-    """
+    """Tests that collect_missing_lines correctly identifies missing lines."""
     # Mock Coverage instance
     mock_cov_instance = mock_coverage_class.return_value
     mock_cov_instance.load.return_value = None
@@ -34,10 +34,6 @@ def test_collect_missing_lines(mock_coverage_class: MagicMock) -> None:
 
     mock_cov_instance.json_report.side_effect = fake_json_report
 
-    # Simula que o arquivo existe após json_report
-    # import builtins
-
-    # # original_open removed - unused
     # Executa a função
     missing_info = collect_missing_lines("fake.coverage")
 
@@ -53,9 +49,7 @@ def test_collect_missing_lines(mock_coverage_class: MagicMock) -> None:
 
 @patch("ai_unit_test.coverage_helper.Coverage")
 def test_collect_missing_lines_no_missing(mock_coverage_class: MagicMock) -> None:
-    """
-    Tests that collect_missing_lines returns an empty dict when no missing lines.
-    """
+    """Tests that collect_missing_lines returns an empty dict when no missing lines."""
     mock_cov_instance = mock_coverage_class.return_value
     mock_cov_instance.load.return_value = None
     mock_cov_instance.combine.return_value = None
@@ -85,9 +79,7 @@ def test_collect_missing_lines_no_missing(mock_coverage_class: MagicMock) -> Non
 
 @patch("ai_unit_test.coverage_helper.Coverage")
 def test_collect_missing_lines_single_file(mock_coverage_class: MagicMock) -> None:
-    """
-    Tests that collect_missing_lines correctly identifies missing lines for a single file.
-    """
+    """Tests that collect_missing_lines correctly identifies missing lines for a single file."""
     mock_cov_instance = mock_coverage_class.return_value
     mock_cov_instance.load.return_value = None
     mock_cov_instance.combine.return_value = None
@@ -118,9 +110,7 @@ def test_collect_missing_lines_single_file(mock_coverage_class: MagicMock) -> No
 
 @patch("ai_unit_test.coverage_helper.Coverage")
 def test_collect_missing_lines_multiple_files(mock_coverage_class: MagicMock) -> None:
-    """
-    Tests that collect_missing_lines correctly identifies missing lines for multiple files.
-    """
+    """Tests that collect_missing_lines correctly identifies missing lines for multiple files."""
     mock_cov_instance = mock_coverage_class.return_value
     mock_cov_instance.load.return_value = None
     mock_cov_instance.combine.return_value = None
@@ -159,8 +149,9 @@ def test_collect_missing_lines_multiple_files(mock_coverage_class: MagicMock) ->
 def test_collect_missing_lines_multiple_files_with_all_missing(
     mock_coverage_class: MagicMock,
 ) -> None:
-    """
-    Tests that collect_missing_lines correctly identifies missing lines for multiple files with all missing lines.
+    """Tests that collect_missing_lines correctly identifies missing lines for multiple files.
+
+    All missing lines are identified.
     """
     mock_cov_instance = mock_coverage_class.return_value
     mock_cov_instance.load.return_value = None
@@ -197,8 +188,9 @@ def test_collect_missing_lines_multiple_files_with_all_missing(
 def test_collect_missing_lines_multiple_files_with_some_missing(
     mock_coverage_class: MagicMock,
 ) -> None:
-    """
-    Tests that collect_missing_lines correctly identifies missing lines for multiple files with some missing lines.
+    """Tests that collect_missing_lines correctly identifies missing lines for multiple files.
+
+    Some missing lines are identified.
     """
     mock_cov_instance = mock_coverage_class.return_value
     mock_cov_instance.load.return_value = None
@@ -237,8 +229,9 @@ def test_collect_missing_lines_multiple_files_with_some_missing(
 def test_collect_missing_lines_with_multiple_missing_lines(
     mock_coverage_class: MagicMock,
 ) -> None:
-    """
-    Tests that collect_missing_lines correctly identifies multiple missing lines in a single file.
+    """Tests that collect_missing_lines correctly identifies multiple missing lines.
+
+    In a single file.
     """
     mock_cov_instance = mock_coverage_class.return_value
     mock_cov_instance.load.return_value = None
@@ -272,8 +265,9 @@ def test_collect_missing_lines_with_multiple_missing_lines(
 def test_collect_missing_lines_with_no_measured_files(
     mock_coverage_class: MagicMock,
 ) -> None:
-    """
-    Tests that collect_missing_lines returns an empty dict when there are no measured files.
+    """Tests that collect_missing_lines returns an empty dict.
+
+    When there are no measured files.
     """
     mock_cov_instance = mock_coverage_class.return_value
     mock_cov_instance.load.return_value = None
@@ -301,8 +295,9 @@ def test_collect_missing_lines_with_no_measured_files(
 def test_collect_missing_lines_with_specific_missing_lines(
     mock_coverage_class: MagicMock,
 ) -> None:
-    """
-    Tests that collect_missing_lines correctly identifies specific missing lines in a file.
+    """Tests that collect_missing_lines correctly identifies specific missing lines.
+
+    In a file.
     """
     mock_cov_instance = mock_coverage_class.return_value
     mock_cov_instance.load.return_value = None
@@ -336,8 +331,9 @@ def test_collect_missing_lines_with_specific_missing_lines(
 def test_collect_missing_lines_with_all_lines_missing(
     mock_coverage_class: MagicMock,
 ) -> None:
-    """
-    Tests that collect_missing_lines correctly identifies all missing lines in a file.
+    """Tests that collect_missing_lines correctly identifies all missing lines.
+
+    In a file.
     """
     mock_cov_instance = mock_coverage_class.return_value
     mock_cov_instance.load.return_value = None
@@ -373,8 +369,9 @@ def test_collect_missing_lines_with_all_lines_missing(
 def test_collect_missing_lines_with_all_lines_missing_in_file(
     mock_coverage_class: MagicMock,
 ) -> None:
-    """
-    Tests that collect_missing_lines correctly identifies all missing lines in a specific file.
+    """Tests that collect_missing_lines correctly identifies all missing lines.
+
+    In a specific file.
     """
     mock_cov_instance = mock_coverage_class.return_value
     mock_cov_instance.load.return_value = None
@@ -427,8 +424,9 @@ def test_collect_missing_lines_with_all_lines_missing_in_file(
 def test_collect_missing_lines_with_specific_missing_lines_multiple(
     mock_coverage_class: MagicMock,
 ) -> None:
-    """
-    Tests that collect_missing_lines correctly identifies specific missing lines in multiple files.
+    """Tests that collect_missing_lines correctly identifies specific missing lines.
+
+    In multiple files.
     """
     mock_cov_instance = mock_coverage_class.return_value
     mock_cov_instance.load.return_value = None
@@ -465,8 +463,9 @@ def test_collect_missing_lines_with_specific_missing_lines_multiple(
 def test_collect_missing_lines_with_all_lines_missing_in_file_multiple(
     mock_coverage_class: MagicMock,
 ) -> None:
-    """
-    Tests that collect_missing_lines correctly identifies all missing lines in multiple files.
+    """Tests that collect_missing_lines correctly identifies all missing lines.
+
+    In multiple files.
     """
     mock_cov_instance = mock_coverage_class.return_value
     mock_cov_instance.load.return_value = None

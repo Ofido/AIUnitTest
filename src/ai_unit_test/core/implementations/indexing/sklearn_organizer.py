@@ -46,6 +46,12 @@ class SklearnIndexOrganizer(IndexOrganizer):
     _index_path: Path | None
 
     def __init__(self, config: dict[str, Any]) -> None:
+        """
+        Initialize the SklearnIndexOrganizer.
+
+        Args:
+            config: Configuration dictionary for the index.
+        """
         super().__init__(config)
 
         if not SKLEARN_AVAILABLE:

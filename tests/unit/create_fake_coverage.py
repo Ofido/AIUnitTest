@@ -1,3 +1,5 @@
+"""Script to create a fake .coverage file for testing purposes."""
+
 import sqlite3
 
 # Create a fake .coverage file for testing

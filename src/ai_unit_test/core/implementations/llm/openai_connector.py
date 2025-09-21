@@ -40,6 +40,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class OpenAIConnectorConfig:
+    """Configuration class for OpenAIConnector."""
+
     api_key: str | None = None
     timeout: int = 30
     base_url: str | None = None
@@ -91,6 +93,12 @@ class OpenAIConnector(LLMConnector[OpenAIConnectorConfig]):
         )
 
     def __init__(self, config: OpenAIConnectorConfig | dict[str, Any]) -> None:
+        """
+        Initialize the OpenAIConnector.
+
+        Args:
+            config: Configuration for the OpenAI connector.
+        """
         super().__init__(config)  # Mantém compatibilidade, mas ignora config original
 
         if not getattr(self.config, "api_key", None):
@@ -258,7 +266,7 @@ class OpenAIConnector(LLMConnector[OpenAIConnectorConfig]):
             return False
 
     def get_available_models(self) -> list[str]:
-        """Retorna modelos disponíveis (cache ou fallback)."""
+        """Return available models (cache or fallback)."""
         if self._available_models_cache:
             return list(self._available_models_cache)
 
@@ -299,6 +307,7 @@ class OpenAIConnector(LLMConnector[OpenAIConnectorConfig]):
     async def select_model(self, capability: str = "chat") -> str:
         """
         Seleciona o melhor modelo automaticamente.
+
         capability: "chat" | "embeddings" | "streaming"
         """
         # preferir config explícita
@@ -364,6 +373,12 @@ class RateLimiter:
     """Simple rate limiter for API requests."""
 
     def __init__(self, requests_per_minute: int) -> None:
+        """
+        Initialize the RateLimiter.
+
+        Args:
+            requests_per_minute: The maximum number of requests allowed per minute.
+        """
         self.requests_per_minute = requests_per_minute
         self.requests: list[float] = []
 

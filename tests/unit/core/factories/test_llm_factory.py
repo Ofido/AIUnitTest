@@ -15,7 +15,6 @@ class TestLLMConnectorFactory:
 
     def test_factory_registration(self) -> None:
         """Test connector registration."""
-
         # Test getting available connectors
         connectors = LLMConnectorFactory.get_available_connectors()
         assert isinstance(connectors, list)
@@ -47,7 +46,6 @@ class TestLLMConnectorFactory:
 
     def test_create_unknown_connector(self) -> None:
         """Test creating unknown connector raises error."""
-
         with pytest.raises(ConfigurationError) as exc_info:
             LLMConnectorFactory.create_connector("unknown")
 
@@ -57,7 +55,6 @@ class TestLLMConnectorFactory:
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key", "OPENAI_API_URL": "http://test"})
     def test_environment_config_merging(self) -> None:
         """Test environment variable merging."""
-
         # Test OpenAI environment variables
         config = {"temperature": 0.5}
         merged_config = LLMConnectorFactory._merge_environment_config("openai", config)
@@ -68,7 +65,6 @@ class TestLLMConnectorFactory:
 
     def test_create_from_config_file(self) -> None:
         """Test creating connector from configuration file."""
-
         # Test with mock provider config
         config = {
             "tool": {

@@ -5,10 +5,13 @@ typer
 black
 isort
 flake8
-mypy
-pymarkdownlnt
 flake8-bugbear
 flake8-annotations
+flake8-docstrings
+flake8-comprehensions
+flake8-eradicate
+flake8-pytest-style
+mypy
 pytest
 pytest-cov
 pytest-asyncio

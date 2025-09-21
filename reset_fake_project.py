@@ -1,7 +1,10 @@
+"""This module provides a function to reset the fake project's test file."""
+
 from pathlib import Path
 
 
 def reset_test_file() -> None:
+    """Reset the content of 'tests/fake_project/tests/test_simple_math.py' to its original state."""
     original_content = """from src.simple_math import add
 
 def test_add() -> None:

@@ -149,27 +149,27 @@ def sample_coverage_data(temp_dir: Path) -> dict[str, list[int]]:
 # Performance test fixtures
 @pytest.fixture
 def performance_config() -> dict[str, Any]:
-    """Configuration for performance tests."""
+    """Configure performance tests."""
     return {"max_response_time_ms": 5000, "max_memory_usage_mb": 500, "max_cli_startup_time_ms": 2000}
 
 
 # Contract test fixtures
 @pytest.fixture
 def openai_test_config() -> dict[str, Any]:
-    """Configuration for OpenAI contract tests."""
+    """Configure OpenAI contract tests."""
     return {"api_key": "test-key", "model": "gpt-5-nano", "max_tokens": 100, "temperature": 0.1}
 
 
 @pytest.fixture
 def huggingface_test_config() -> dict[str, Any]:
-    """Configuration for HuggingFace contract tests."""
+    """Configure HuggingFace contract tests."""
     return {"model": "stabilityai/stable-code-instruct-3b", "use_api": False, "device": -1}  # CPU
 
 
 # Async test helpers
 @pytest.fixture
 async def async_test_timeout() -> float:
-    """Timeout for async tests."""
+    """Provide timeout for async tests."""
     return 30.0  # 30 seconds
 
 

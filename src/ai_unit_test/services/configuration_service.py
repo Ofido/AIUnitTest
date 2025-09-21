@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class EnvironmentStatus:
+    """Represents the status of the environment."""
+
     python_version: str
     working_directory: str
     pyproject_exists: bool
@@ -27,6 +29,12 @@ class ConfigurationService(BaseService):
     """Service for managing application configuration."""
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
+        """
+        Initialize the ConfigurationService.
+
+        Args:
+            config: Optional configuration dictionary.
+        """
         super().__init__(config)
         self._pyproject_cache: dict[str, Any] | None = None
 
@@ -108,7 +116,6 @@ class ConfigurationService(BaseService):
         auto_discovery: bool = False,
     ) -> tuple[list[str], str, str]:
         """Resolve and validate all path configurations."""
-
         if auto_discovery or not (folders and tests_folder):
             self.logger.info("Auto-discovery enabled or paths not provided")
             cfg = self.load_pyproject_config()

@@ -15,7 +15,7 @@ class TestLLMConnectorInterface:
     """Test that all LLM connectors implement the interface correctly."""
 
     @pytest.mark.parametrize(
-        "connector_class,config",
+        ("connector_class", "config"),
         [
             (MockConnector, {"should_fail": False}),
             (OpenAIConnector, {"api_key": "test-key"}),
@@ -26,7 +26,6 @@ class TestLLMConnectorInterface:
         self, connector_class: type[LLMConnector[MockConnectorConfig]], config: dict[str, Any]
     ) -> None:
         """Test that connector implements all required interface methods."""
-
         # Test instantiation
         connector = connector_class(config)
         assert isinstance(connector, LLMConnector)
@@ -51,7 +50,7 @@ class TestLLMConnectorInterface:
         assert hasattr(connector, "__aexit__")
 
     @pytest.mark.parametrize(
-        "connector_class,config",
+        ("connector_class", "config"),
         [
             (MockConnector, {"should_fail": False}),
         ],
@@ -60,7 +59,6 @@ class TestLLMConnectorInterface:
         self, connector_class: type[LLMConnector[MockConnectorConfig]], config: dict[str, Any]
     ) -> None:
         """Test generate_response method contract."""
-
         async with connector_class(config) as connector:
             request = LLMRequest(
                 system_message="You are helpful.", user_message="Say hello", model="test-model", temperature=0.1
@@ -79,7 +77,7 @@ class TestLLMConnectorInterface:
             assert response.response_time_ms >= 0
 
     @pytest.mark.parametrize(
-        "connector_class,config",
+        ("connector_class", "config"),
         [
             (MockConnector, {"should_fail": False}),
         ],
@@ -88,7 +86,6 @@ class TestLLMConnectorInterface:
         self, connector_class: type[LLMConnector[MockConnectorConfig]], config: dict[str, Any]
     ) -> None:
         """Test generate_stream method contract."""
-
         async with connector_class(config) as connector:
             request = LLMRequest(
                 system_message="You are helpful.", user_message="Count to 3", model="test-model", temperature=0.1
@@ -108,7 +105,6 @@ class TestLLMConnectorInterface:
 
     async def test_error_handling_contract(self) -> None:
         """Test error handling behavior."""
-
         # Test initialization failure
         connector = MockConnector({"should_fail": True})
 
@@ -127,7 +123,6 @@ class TestLLMConnectorInterface:
 
     async def test_health_check_contract(self) -> None:
         """Test health check behavior."""
-
         # Healthy connector
         async with MockConnector({"should_fail": False}) as connector:
             health = await connector.health_check()
@@ -141,7 +136,6 @@ class TestLLMConnectorInterface:
 
     async def test_get_available_models_contract(self) -> None:
         """Test get_available_models behavior."""
-
         connector = MockConnector({"should_fail": False})
         models = connector.get_available_models()
 
@@ -151,7 +145,6 @@ class TestLLMConnectorInterface:
 
     async def test_get_connector_info_contract(self) -> None:
         """Test get_connector_info behavior."""
-
         connector = MockConnector({"should_fail": False})
         info = connector.get_connector_info()
 

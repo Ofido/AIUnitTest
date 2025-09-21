@@ -51,6 +51,8 @@ else:
 
 @dataclass
 class HuggingFaceConfig:
+    """Configuration class for HuggingFaceConnector."""
+
     api_key: str | None = None
     timeout: int = 30
     model: str | None = "stabilityai/stable-code-instruct-3b"
@@ -76,6 +78,12 @@ class HuggingFaceConnector(LLMConnector[HuggingFaceConfig]):
         return HuggingFaceConfig(**config)
 
     def __init__(self, config: dict[str, Any] | HuggingFaceConfig) -> None:
+        """
+        Initialize the HuggingFaceConnector.
+
+        Args:
+            config: Configuration for the HuggingFace connector.
+        """
         super().__init__(config)
         self.model = None
         self.use_api = self.config.use_api

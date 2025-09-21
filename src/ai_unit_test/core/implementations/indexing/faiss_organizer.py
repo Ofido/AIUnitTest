@@ -43,6 +43,12 @@ class FaissIndexOrganizer(IndexOrganizer):
     index_info: IndexMetadata
 
     def __init__(self, config: dict[str, Any]) -> None:
+        """
+        Initialize the FaissIndexOrganizer.
+
+        Args:
+            config: Configuration dictionary for the index.
+        """
         super().__init__(config)
 
         if not FAISS_AVAILABLE:

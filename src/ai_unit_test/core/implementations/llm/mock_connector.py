@@ -20,6 +20,8 @@ from ai_unit_test.core.interfaces.llm_connector import (
 
 @dataclass
 class MockConnectorConfig:
+    """Configuration class for MockConnector."""
+
     api_key: str | None = None
     timeout: int = 30
     base_url: str | None = None
@@ -38,6 +40,12 @@ class MockConnector(LLMConnector[MockConnectorConfig]):
     """Mock LLM connector for testing."""
 
     def __init__(self, config: dict[str, Any] | MockConnectorConfig) -> None:
+        """
+        Initialize the MockConnector.
+
+        Args:
+            config: Configuration for the mock connector.
+        """
         super().__init__(config)
         self._should_fail = self.config.should_fail
         self._failure_mode = False

@@ -2,7 +2,7 @@
 statistics=true
 count=True
 max-line-length = 120
-extend-select = B, ANN
+extend-select = B, ANN, D, C4, E, PT
 max-complexity = 10
 # E203: whitespace before ':' (conflita com Black)
 # W503: line break before binary operator (conflita com Black)

@@ -1,3 +1,5 @@
+"""Helper functions for coverage analysis."""
+
 import json
 import logging
 from pathlib import Path
@@ -9,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def collect_missing_lines(data_file: str, source_folders: list[str] | None = None) -> dict[Path, list[int]]:
-    """Returns a mapping {file: [lines without coverage]} using the .coverage file.
+    """Return a mapping {file: [lines without coverage]} using the .coverage file.
 
     Args:
         data_file: Path to the .coverage file

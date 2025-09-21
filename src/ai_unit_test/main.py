@@ -22,7 +22,7 @@ def main(
     config_file: Path | None = CONFIG_FILE_OPTION,
 ) -> None:
     """
-    AI Unit Test - Generate comprehensive unit tests using AI
+    AI Unit Test - Generate comprehensive unit tests using AI.
 
     This tool analyzes your code coverage and generates targeted unit tests
     for uncovered code using large language models.

@@ -91,7 +91,6 @@ class TestProcessingService(BaseService):
         self, source_folders: list[str], tests_folder: str, coverage_file: str
     ) -> CoverageProcessingResult:
         """Process missing coverage and generate tests."""
-
         if not self.llm_connector:
             await self.initialize_dependencies()
 
@@ -143,7 +142,6 @@ class TestProcessingService(BaseService):
         self, source_file_path: Path, uncovered_lines: list[int], tests_folder: str
     ) -> FileTestResult:
         """Process a single source file for test generation."""
-
         self.logger.info(f"Processing source file: {source_file_path}")
 
         # Find corresponding test file
@@ -292,7 +290,6 @@ class TestProcessingService(BaseService):
         test_style: str,
     ) -> str:
         """Generate test using LLM connector."""
-
         if not self.llm_connector:
             raise TestGenerationError("LLM connector not initialized")
 

@@ -7,18 +7,19 @@ from typing import Any
 import numpy as np
 
 from ai_unit_test.core.exceptions import IndexError
-from ai_unit_test.core.interfaces.index_organizer import (
-    IndexMetadata,
-    IndexOrganizer,
-    IndexStats,
-    SearchResult,
-)
+from ai_unit_test.core.interfaces.index_organizer import IndexMetadata, IndexOrganizer, IndexStats, SearchResult
 
 
 class InMemoryIndexOrganizer(IndexOrganizer):
     """In-memory index organizer for testing."""
 
     def __init__(self, config: dict[str, Any]) -> None:
+        """
+        Initialize the InMemoryIndexOrganizer.
+
+        Args:
+            config: Configuration dictionary for the index.
+        """
         super().__init__(config)
         self.embeddings: np.ndarray | None = None
         self.metadata: list[dict[str, Any]] = []

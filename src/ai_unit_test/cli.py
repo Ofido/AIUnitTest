@@ -6,13 +6,9 @@ from typing import Any
 
 import typer
 
-from ai_unit_test.services.orchestration_service import (
-    HealthStatus,
-    OrchestrationService,
-)
+from ai_unit_test.services.orchestration_service import HealthStatus
 
 logger = logging.getLogger(__name__)
-app = typer.Typer()
 
 FOLDERS_OPTION = typer.Option(None, "--folders", "-f", help="Source code folders to analyze for coverage")
 TESTS_FOLDER_OPTION = typer.Option(None, "--tests-folder", "-t", help="Directory containing test files")
@@ -30,8 +26,8 @@ def handle_cli_exception(e: Exception) -> None:
     typer.echo(f"❌ Error: {e}", err=True)
 
 
-@app.command()
 def generate_tests(
+    ctx: typer.Context,
     folders: list[str] | None = FOLDERS_OPTION,
     tests_folder: str | None = TESTS_FOLDER_OPTION,
     coverage_file: str = COVERAGE_FILE_OPTION,
@@ -40,11 +36,7 @@ def generate_tests(
 ) -> None:
     """Generate unit tests for uncovered code using AI."""
     try:
-        # Create orchestration service
-        config: dict[str, Any] = {"indexing": {"index_directory": index_dir}} if index_dir else {}
-        orchestration_service = OrchestrationService(config)
-
-        # Run workflow
+        orchestration_service = ctx.obj["orchestration_service"]
         typer.echo("🚀 Starting test generation...")
 
         results = asyncio.run(
@@ -53,13 +45,12 @@ def generate_tests(
                 tests_folder=tests_folder,
                 coverage_file=coverage_file,
                 auto_discovery=auto,
+                index_directory=index_dir,
             )
         )
 
-        # Display results
         _display_test_generation_results(results)
 
-        # Exit with appropriate code
         if results["status"] == "error":
             raise typer.Exit(1)
         elif results["status"] == "partial_success":
@@ -69,23 +60,21 @@ def generate_tests(
             typer.echo("✅ Test generation completed successfully!")
 
     except (SystemExit, typer.Exit):
-        # Normal CLI exit, don't handle as error
         raise
     except Exception as e:
         handle_cli_exception(e)
         raise typer.Exit(1)
 
 
-@app.command()
 def create_index(
+    ctx: typer.Context,
     folders: list[str] = FOLDERS_REQUIRED_OPTION,
     index_dir: str = INDEX_DIR_DEFAULT_OPTION,
     force: bool = FORCE_OPTION,
 ) -> None:
     """Create semantic search index from source code."""
     try:
-        orchestration_service = OrchestrationService()
-
+        orchestration_service = ctx.obj["orchestration_service"]
         typer.echo("🏗️  Creating semantic search index...")
 
         results = asyncio.run(
@@ -102,19 +91,16 @@ def create_index(
             typer.echo("✅ Index creation completed!")
 
     except (SystemExit, typer.Exit):
-        # Normal CLI exit, don't handle as error
         raise
     except Exception as e:
         handle_cli_exception(e)
         raise typer.Exit(1)
 
 
-@app.command()
-def health_check() -> None:
+def health_check(ctx: typer.Context) -> None:
     """Check system health and configuration."""
     try:
-        orchestration_service = OrchestrationService()
-
+        orchestration_service = ctx.obj["orchestration_service"]
         typer.echo("🏥 Running health check...")
 
         results = asyncio.run(orchestration_service.run_health_check_workflow())
@@ -129,7 +115,6 @@ def health_check() -> None:
             typer.echo("✅ System is healthy!")
 
     except (SystemExit, typer.Exit):
-        # Normal CLI exit, don't handle as error
         raise
     except Exception as e:
         handle_cli_exception(e)
@@ -146,7 +131,6 @@ def _display_test_generation_results(results: dict[str, Any]) -> None:
     if results.get("workflow_duration_seconds"):
         typer.echo(f"  Duration: {results['workflow_duration_seconds']:.2f}s")
 
-    # Display file-specific results
     file_results = results.get("file_results", {})
     if file_results:
         typer.echo("\n📁 File Results:")
@@ -154,7 +138,6 @@ def _display_test_generation_results(results: dict[str, Any]) -> None:
             status_icon = "✅" if file_result.get("test_generated") else "⚠️"
             typer.echo(f"  {status_icon} {file_path}: {file_result.get('status', 'unknown')}")
 
-    # Display errors
     errors = results.get("errors", [])
     if errors:
         typer.echo("\n❌ Errors:")
@@ -183,7 +166,3 @@ def _display_health_check_results(results: HealthStatus) -> None:
 
         if not check_result.healthy and hasattr(check_result, "error"):
             typer.echo(f"      Error: {check_result.error}")
-
-
-if __name__ == "__main__":
-    app()

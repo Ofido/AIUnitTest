@@ -11,13 +11,23 @@ extend-ignore = E203,W503,ANN101
 exclude =
     env,
     .venv,
+    venv,
     build,
     dist,
     __pycache__,
     assets,
     tests/fake_project,
-    src/ai_unit_test/_version.py
+    src/ai_unit_test/_version.py,
+    .pytest_cache,
+    htmlcov,
+    .ai_unit_test_cache,
+    .git
 
 # F401: imported but unused (comum em __init__.py para re-exports)
 per-file-ignores =
     __init__.py:F401
+
+[flake8-annotations]
+suppress-none-returning = true
+suppress-dummy-args = true
+allow-untyped-defs = true

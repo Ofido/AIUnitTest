@@ -4,8 +4,8 @@ count=True
 max-line-length = 120
 extend-select = B, ANN, D, C4, E, PT
 max-complexity = 10
-# E203: whitespace before ':' (conflita com Black)
-# W503: line break before binary operator (conflita com Black)
+# E203: whitespace before ':' (Black's conflict)
+# W503: line break before binary operator (Black's conflict)
 # ANN101: missing-type-self - Modern type checkers, such as MyPy, are capable of inferring the type of self automatically. This makes explicit annotation of self redundant in most cases.
 extend-ignore = E203,W503,ANN101
 exclude =
@@ -26,6 +26,7 @@ exclude =
 # F401: imported but unused (comum em __init__.py para re-exports)
 per-file-ignores =
     __init__.py:F401
+    tests/fake_project/**: D100,D103
 
 [flake8-annotations]
 suppress-none-returning = true

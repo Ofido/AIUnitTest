@@ -36,7 +36,7 @@ dependencies = [
 "Bug Tracker" = "https://github.com/ofido/AIUnitTest/issues"
 
 [project.scripts]
-ai-unit-test = "ai_unit_test.cli:app"
+ai-unit-test = "ai_unit_test.__main__:run_app"
 
 [project.optional-dependencies]
 dev = [
@@ -136,9 +136,9 @@ ignore_missing_imports = true
 minversion = "6.0"
 asyncio_mode = "auto"
 addopts = "-ra -q --strict-markers --tb=short --cov=src --cov-report=term-missing"
-testpaths = ["tests"]
+testpaths = ["tests/unit"] # Mudança aqui: só testes unitários
 python_files = ["test_*.py"]
-norecursedirs = ["tests/fake_project"]
+norecursedirs = ["tests/fake_project", "tests/behaviors"]
 markers = [
   "slow: marks slow tests",
   "integration: marks integration tests",
@@ -148,7 +148,8 @@ markers = [
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["tests/*", "main.py", "src/ai_unit_test/_version.py"]
+omit = ["tests/*", "src/ai_unit_test/_version.py"]
+disable_warnings = ["couldnt-parse"]
 
 [tool.coverage.report]
 show_missing = true
@@ -170,3 +171,6 @@ test-patterns = ["test_*.py", "*_test.py"]
 
 [tool.ai-unit-test.llm]
 provider = "openai"
+model = "gpt-5-mini"
+# use_api = false
+# max_length = 2048

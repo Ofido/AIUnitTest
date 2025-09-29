@@ -135,4 +135,5 @@ class MockConnector(LLMConnector[MockConnectorConfig]):
 
     def set_failure_mode(self, should_fail: bool) -> None:
         """Set the failure mode of the mock connector."""
+        self._should_fail = should_fail
         self._failure_mode = should_fail

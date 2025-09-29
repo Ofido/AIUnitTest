@@ -36,6 +36,23 @@ logger = logging.getLogger(__name__)
 
 
 class FaissIndexOrganizer(IndexOrganizer):
+    """FAISS index organizer implementation."""
+
+    async def update_documents(self, document_ids: list[str], metadatas: list[dict[str, Any]]) -> None:
+        """Update multiple documents (não suportado pelo FAISS)."""
+        raise NotImplementedError("FAISS doesn't support document updates. Rebuild index instead.")
+
+    async def get_index_stats(self) -> IndexStats:
+        """Retorna estatísticas mínimas do index se carregado."""
+        if not self._index_loaded:
+            raise IndexError("No index loaded")
+        return IndexStats(
+            total_documents=self.index.ntotal if hasattr(self, "index") else 0,
+            average_score_distribution={},
+            search_latency_ms=0.0,
+            memory_usage_mb=0.0,
+        )
+
     """FAISS-based index organizer implementation."""
 
     index: IndexFlatIP | IndexFlatL2 | IndexIVFFlat
@@ -111,15 +128,15 @@ class FaissIndexOrganizer(IndexOrganizer):
 
     async def load_index(self, index_path: Path) -> IndexMetadata:
         """Load existing FAISS index."""
+        index_file = index_path / "index.faiss"
+        metadata_file = index_path / "index_meta.json"
+        manifest_file = index_path / "index_manifest.json"
+
+        # Check if files exist
+        if not all(f.exists() for f in [index_file, metadata_file, manifest_file]):
+            raise IndexNotFoundError(f"Index files not found in {index_path}")
+
         try:
-            index_file = index_path / "index.faiss"
-            metadata_file = index_path / "index_meta.json"
-            manifest_file = index_path / "index_manifest.json"
-
-            # Check if files exist
-            if not all(f.exists() for f in [index_file, metadata_file, manifest_file]):
-                raise IndexNotFoundError(f"Index files not found in {index_path}")
-
             # Load index
             self.index = faiss.read_index(str(index_file))
 
@@ -147,7 +164,6 @@ class FaissIndexOrganizer(IndexOrganizer):
 
             logger.info(f"FAISS index loaded: {len(self.metadata)} documents")
             return self.index_info
-
         except Exception as e:
             logger.error(f"Failed to load FAISS index: {e}")
             raise IndexError(f"Index loading failed: {e}")

@@ -86,7 +86,9 @@ class InMemoryIndexOrganizer(IndexOrganizer):
             raise IndexError("Index not created")
 
         self.embeddings = np.vstack([self.embeddings, embeddings])
+        print(f"Before extend: {len(self.metadata)}")
         self.metadata.extend(metadata)
+        print(f"After extend: {len(self.metadata)}")
         new_doc_ids = [str(i) for i in range(len(self.doc_ids), len(self.metadata))]
         self.doc_ids.extend(new_doc_ids)
         self.index_info.total_documents = len(self.metadata)

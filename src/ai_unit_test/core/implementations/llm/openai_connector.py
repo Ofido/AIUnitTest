@@ -219,7 +219,7 @@ class OpenAIConnector(LLMConnector[OpenAIConnectorConfig]):
             )
 
             response_time_ms = int((time.time() - start_time) * 1000)
-            embeddings = np.array([item.embedding for item in response.data])
+            embeddings = np.array([item.embedding for item in response.data], dtype=np.float32)
 
             if request.normalize:
                 from sklearn.preprocessing import normalize  # type: ignore[import-untyped]

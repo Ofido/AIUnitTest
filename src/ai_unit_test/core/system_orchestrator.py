@@ -140,9 +140,9 @@ class SystemOrchestrator:
 
     def validate_system_requirements(self) -> None:
         """Validate system requirements and environment."""
-        if sys.version_info < (3, 8):
+        if sys.version_info < (3, 10):
             raise RuntimeError(
-                f"Python 3.8+ is required. Current version: {sys.version_info.major}.{sys.version_info.minor}"
+                f"Python 3.10+ is required. Current version: {sys.version_info.major}.{sys.version_info.minor}"
             )
 
         try:

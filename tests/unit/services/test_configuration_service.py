@@ -157,3 +157,48 @@ model = "mock-model"
                 assert status.pyproject_exists is True
                 assert status.environment_variables["OPENAI_API_KEY"] is True
                 assert status.environment_variables["HF_API_KEY"] is False
+
+    def test_cover_misc_branches(self, sample_pyproject_config: dict[str, Any]) -> None:
+        """Test miscellaneous branches."""
+        service = ConfigurationService()
+
+        # __repr__
+        assert service.__repr__() == "ConfigurationService"
+
+        # extract_source_configuration with pyproject_data None uses load_pyproject_config
+        with patch.object(service, "load_pyproject_config", return_value=sample_pyproject_config):
+            folders, tests_folder, coverage_path = service.extract_source_configuration(None)
+        assert folders == ["src"]
+        assert tests_folder == "tests"
+        assert coverage_path == ".coverage"
+
+        # get_llm_config with llm_provider present
+        pyproject_llm = {"tool": {"ai-unit-test": {"llm_provider": "openai", "llm": {"model": "gpt"}}}}
+        llm = service.get_llm_config(pyproject_llm)
+        assert llm["provider"] == "openai"
+        assert llm["model"] == "gpt"
+
+        # get_indexing_config when pyproject_data is None (uses load)
+        with patch.object(
+            service, "load_pyproject_config", return_value={"tool": {"ai-unit-test": {"indexing": {"backend": "disk"}}}}
+        ):
+            idx = service.get_indexing_config(None)
+        assert idx["backend"] == "disk"
+
+        # resolve_paths_from_config should log warnings for missing folders/tests and respect coverage replacement
+        service._pyproject_cache = sample_pyproject_config
+        test_folders = ["nonexistent_src"]
+        test_tests_folder = "nonexistent_tests"
+        test_coverage = ".coverage"
+        with patch("pathlib.Path.exists", return_value=False):
+            with patch.object(service.logger, "warning") as mock_warn:
+                res_folders, res_tests, res_cov = service.resolve_paths_from_config(
+                    folders=test_folders,
+                    tests_folder=test_tests_folder,
+                    coverage_file=test_coverage,
+                    auto_discovery=False,
+                )
+        assert res_folders == test_folders
+        assert res_tests == test_tests_folder
+        assert res_cov == ".coverage"
+        assert mock_warn.call_count == 2

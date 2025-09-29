@@ -496,3 +496,40 @@ def test_collect_missing_lines_with_all_lines_missing_in_file_multiple(
     mock_cov_instance.load.assert_called_once()
     mock_cov_instance.combine.assert_called_once()
     mock_cov_instance.json_report.assert_called_once()
+
+
+@patch("ai_unit_test.coverage_helper.Coverage")
+def test_collect_missing_lines_with_source_folders_and_empty_files(
+    mock_coverage_class: MagicMock,
+) -> None:
+    """Tests that collect_missing_lines correctly handles source folders and empty files."""
+    mock_cov_instance = mock_coverage_class.return_value
+    mock_cov_instance.load.return_value = None
+    mock_cov_instance.combine.return_value = None
+
+    def fake_json_report(outfile: str) -> None:
+        import json
+
+        report_data: dict[str, Any] = {
+            "files": {
+                "src/included.py": {"missing_lines": [2, 5]},
+                "src/empty.py": {"missing_lines": []},
+                "other/outside.py": {"missing_lines": [10]},
+            }
+        }
+        with open(outfile, "w") as f:
+            json.dump(report_data, f)
+
+    mock_cov_instance.json_report.side_effect = fake_json_report
+
+    missing_info = collect_missing_lines("fake.coverage", source_folders=["src"])
+
+    assert len(missing_info) == 1
+    assert Path("src/included.py") in missing_info
+    assert missing_info[Path("src/included.py")] == [2, 5]
+    assert Path("src/empty.py") not in missing_info
+    assert Path("other/outside.py") not in missing_info
+    mock_coverage_class.assert_called_once_with(data_file="fake.coverage", source=["src"])
+    mock_cov_instance.load.assert_called_once()
+    mock_cov_instance.combine.assert_called_once()
+    mock_cov_instance.json_report.assert_called_once()

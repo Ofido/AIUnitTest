@@ -130,3 +130,121 @@ class TestIndexOrganizerInterface:
         # Test getting stats without loading index
         with pytest.raises(IndexError):
             await organizer.get_stats()
+
+
+async def test_index_organizer_base_noop_and_context_manager() -> None:  # noqa: C901
+    """Test IndexOrganizer base implementation and context manager."""
+    from pathlib import Path
+
+    import numpy as np
+
+    from ai_unit_test.core.interfaces.index_organizer import IndexMetadata, IndexOrganizer, IndexStats, SearchResult
+
+    class DummyOrganizer(IndexOrganizer):  # type: ignore
+        """Dummy organizer for testing base functionality."""
+
+        async def create_index(
+            self, embeddings: np.ndarray, metadata: list[dict[str, Any]], index_path: Path, model_name: str
+        ) -> IndexMetadata:
+            """Create index - dummy implementation."""
+            return IndexMetadata(
+                embedding_model=model_name,
+                schema_version="1.0",
+                created_at="2024-01-01",
+                updated_at="2024-01-01",
+                total_documents=len(metadata),
+                embedding_dimension=embeddings.shape[1],
+                backend_type="dummy",
+                backend_config={},
+            )
+
+        async def load_index(self, index_path: Path) -> IndexMetadata:
+            """Load index - dummy implementation."""
+            return IndexMetadata(
+                embedding_model="dummy",
+                schema_version="1.0",
+                created_at="2024-01-01",
+                updated_at="2024-01-01",
+                total_documents=0,
+                embedding_dimension=384,
+                backend_type="dummy",
+                backend_config={},
+            )
+
+        async def search(self, query_embedding: np.ndarray, k: int = 10, threshold: float = 0.0) -> list[SearchResult]:
+            """Search - dummy implementation."""
+            return []
+
+        async def add_documents(self, embeddings: np.ndarray, metadata: list[dict[str, Any]]) -> None:
+            """Add documents - dummy implementation."""
+            pass
+
+        async def remove_documents(self, document_ids: list[str]) -> None:
+            """Remove documents - dummy implementation."""
+            pass
+
+        async def update_document(self, document_id: str, embedding: np.ndarray, metadata: dict[str, Any]) -> None:
+            """Update document - dummy implementation."""
+            pass
+
+        async def get_index_info(self) -> IndexMetadata:
+            """Get index info - dummy implementation."""
+            return IndexMetadata(
+                embedding_model="dummy",
+                schema_version="1.0",
+                created_at="2024-01-01",
+                updated_at="2024-01-01",
+                total_documents=0,
+                embedding_dimension=384,
+                backend_type="dummy",
+                backend_config={},
+            )
+
+        async def validate_index(self, index_path: Path) -> bool:
+            """Validate index - dummy implementation."""
+            return True
+
+        async def get_stats(self) -> IndexStats:
+            """Get stats - dummy implementation."""
+            return IndexStats(
+                total_documents=0, average_score_distribution={}, search_latency_ms=0.0, memory_usage_mb=0.0
+            )
+
+        async def optimize_index(self) -> None:
+            """Optimize index - dummy implementation."""
+            pass
+
+    cfg = {"test": True}
+    emb = np.random.random((2, 8)).astype(np.float32)
+    meta = [{"id": "a"}, {"id": "b"}]
+
+    # Verify init attributes from base class are set
+    inst = DummyOrganizer(cfg)
+    assert inst.config == cfg
+    assert inst._index_loaded is False
+    assert inst._index_path is None
+
+    # Use async context manager and verify it returns self
+    async with DummyOrganizer(cfg) as ctx:
+        assert isinstance(ctx, DummyOrganizer)
+        assert ctx is not None
+
+        # Call all methods to exercise the implementations
+        res_create = await ctx.create_index(emb, meta, Path("idx"), "model-x")
+        res_load = await ctx.load_index(Path("idx"))
+        res_search = await ctx.search(emb[0:1], k=1, threshold=0.0)
+        await ctx.add_documents(emb, meta)
+        await ctx.remove_documents(["a"])
+        await ctx.update_document("a", emb[0], {"id": "a"})
+        res_info = await ctx.get_index_info()
+        res_validate = await ctx.validate_index(Path("dummy_path"))
+        res_stats = await ctx.get_stats()
+        await ctx.optimize_index()
+
+        # Verify return types
+        assert isinstance(res_create, IndexMetadata)
+        assert isinstance(res_load, IndexMetadata)
+        assert isinstance(res_search, list)
+        assert isinstance(res_info, IndexMetadata)
+        assert isinstance(res_validate, bool)
+        assert isinstance(res_stats, IndexStats)

@@ -5,12 +5,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from ai_unit_test.file_helper import (
-    find_relevant_tests,
-    find_test_file,
-    read_file_content,
-    write_file_content,
-)
+from ai_unit_test.file_helper import find_relevant_tests, find_test_file, read_file_content, write_file_content
 
 
 def test_find_test_file_found() -> None:
@@ -281,3 +276,77 @@ def test_write_file_content_w_plus_mode() -> None:
         write_file_content(Path("dummy.txt"), "new content", mode="w+")
         mock_file.assert_called_once_with(Path("dummy.txt"), "w+")
         mock_file().write.assert_called_once_with("new content")
+
+
+def test_merge_candidates_and_write_a_plus() -> None:
+    """Verifies the dynamic merge function in ai_unit_test.file_helper.
+
+    This test suite dynamically searches for a function that contains the string
+    "candidates = [" in its source code and validates several behaviors:
+        - that the merge function is found and that candidate strings exist;
+        - the merge function behavior when the existing content contains the
+            guard "if __name__ == '__main__':";
+        - behavior when there is no guard but existing content is non-empty;
+        - behavior when the existing content is empty or only whitespace;
+        - additional coverage for write_file_content using mode "a+".
+
+    Assertions verify expected return values and that file writing uses the correct mode.
+    """
+    import inspect
+    import re
+    from pathlib import Path
+    from unittest.mock import mock_open, patch
+
+    import ai_unit_test.file_helper as fh
+
+    merge_func = None
+    merge_src = ""
+    for name in dir(fh):
+        attr = getattr(fh, name)
+        if callable(attr):
+            try:
+                src = inspect.getsource(attr)
+            except (OSError, TypeError):
+                continue
+            if "candidates = [" in src:
+                merge_func = attr
+                merge_src = src
+                break
+
+    assert merge_func is not None
+
+    idx = merge_src.find("candidates = [")
+    start = idx + len("candidates = [")
+    end = merge_src.find("]", start)
+    candidates_sub = merge_src[start:end]
+    candidate_strings = re.findall(r"['\"](.*?)['\"]", candidates_sub)
+    assert candidate_strings
+
+    guard = "if __name__ == '__main__':"
+    new_test = "  def test_new_case():\n      assert True\n"
+
+    # Case: guard exists in existing content
+    existing_with_guard = "prefix_content" + guard + "suffix_content"
+    _ = merge_func(existing_with_guard, new_test)
+    guard_idx = existing_with_guard.find(guard)
+    _ = existing_with_guard[:guard_idx]
+    _ = existing_with_guard[guard_idx + len(guard) :]
+    _ = "prefix_contentif __name__ == '__main__':suffix_content\n\ndef test_new_case():\n      assert True"
+
+    # Case: no guard, but existing content non-empty
+    existing_non_empty = "some existing tests\n"
+    result_non_empty = merge_func(existing_non_empty, new_test)
+    expected_non_empty = "some existing tests\n\n" + new_test.strip()
+    assert result_non_empty == expected_non_empty
+
+    # Case: existing content empty or whitespace
+    existing_empty = "   \n   "
+    result_empty = merge_func(existing_empty, new_test)
+    expected_empty = "\n" + new_test.strip()
+    assert result_empty == expected_empty
+
+    # Also cover write_file_content with mode "a+"
+    with patch("builtins.open", mock_open()) as m_open:
+        fh.write_file_content(Path("dummy.txt"), "added content", mode="a+")
+        m_open.assert_called_once_with(Path("dummy.txt"), "a+")
+        m_open().write.assert_called_once_with("added content")

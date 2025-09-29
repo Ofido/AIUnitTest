@@ -1,6 +1,9 @@
 """Test LLM connector factory."""
 
 import os
+from collections.abc import Sequence
+from types import ModuleType
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -89,3 +92,85 @@ class TestLLMConnectorFactory:
         # Test with empty config (should default to OpenAI)
         with pytest.raises(ConfigurationError):
             LLMConnectorFactory.create_from_config_file({})
+
+
+def test_llm_factory_case_insensitive_reload_and_config_merge(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test ."""
+    import builtins
+    import importlib
+    import sys
+
+    from ai_unit_test.core.factories.llm_factory import LLMConnectorFactory as OriginalFactory
+    from ai_unit_test.core.implementations.llm.mock_connector import MockConnector, MockConnectorConfig
+
+    # Case-insensitive provider name and default config handling
+    connector = OriginalFactory.create_connector("MOCK")
+    assert isinstance(connector, MockConnector)
+    assert connector.config == MockConnectorConfig()
+
+    # Simulate ImportError for specific connector implementation imports and reload module
+    orig_import = builtins.__import__
+
+    def fake_import(
+        name: str,
+        globals: dict[str, Any] | None = None,
+        locals: dict[str, Any] | None = None,
+        fromlist: Sequence[str] = [],  # noqa
+        level: int = 0,
+    ) -> ModuleType:
+        if isinstance(name, str) and "ai_unit_test.core.implementations.llm" in name:
+            if any(x in name for x in ("openai", "anthropic", "azure")):
+                raise ImportError("Simulated missing implementation")
+        return orig_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    module_name = "ai_unit_test.core.factories.llm_factory"
+    if module_name in sys.modules:
+        del sys.modules[module_name]
+    # Also remove connector implementation modules to force import attempts
+    for mod in list(sys.modules):
+        if mod.startswith("ai_unit_test.core.implementations.llm"):
+            del sys.modules[mod]
+
+    reloaded_module = importlib.import_module(module_name)
+
+    # Restore original import
+    monkeypatch.setattr(builtins, "__import__", orig_import)
+
+    ReloadedFactory = reloaded_module.LLMConnectorFactory
+    # Ensure reload succeeded and available connectors still contain 'mock'
+    assert "mock" in ReloadedFactory.get_available_connectors()
+
+    # Test create_from_config_file merging when provider is omitted (defaults to openai)
+    # Use a fake connector class to capture merged configuration
+    class FakeConnector:
+        def __init__(self, cfg: Any) -> None:  # noqa
+            self.config = cfg
+
+    original_connectors = ReloadedFactory._connectors.copy()
+    try:
+        ReloadedFactory._connectors["openai"] = FakeConnector
+
+        config = {
+            "tool": {
+                "ai-unit-test": {
+                    "llm": {
+                        "model": "my-model",
+                        "temperature": 0.4,
+                        "openai": {"api_key": "cfg-api", "base_url": "http://cfg"},
+                    }
+                }
+            }
+        }
+
+        fake_conn = ReloadedFactory.create_from_config_file(config)
+        assert isinstance(fake_conn, FakeConnector)
+        merged = fake_conn.config
+        assert merged["model"] == "my-model"
+        assert merged["temperature"] == 0.4
+        assert merged["api_key"] == "cfg-api"
+        assert "openai" not in merged
+        assert "provider" not in merged
+    finally:
+        ReloadedFactory._connectors = original_connectors.copy()

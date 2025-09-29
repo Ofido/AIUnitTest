@@ -37,13 +37,16 @@ def collect_missing_lines(data_file: str, source_folders: list[str] | None = Non
 
     with open(report_file) as f:
         report_data = json.load(f)
+    logger.debug(f"Report data: {report_data}")
 
     for file_path_str, file_data in report_data["files"].items():
         file_path = Path(file_path_str)
 
         # Filter by source folders if provided
         if source_folders:
-            is_in_source = any(file_path.is_relative_to(Path(folder).resolve()) for folder in source_folders)
+            logger.debug(f"Source folders: {source_folders}")
+            is_in_source = any(file_path.resolve().is_relative_to(Path(folder).resolve()) for folder in source_folders)
+            logger.debug(f"File: {file_path}, Is in source: {is_in_source}")
             if not is_in_source:
                 continue
 

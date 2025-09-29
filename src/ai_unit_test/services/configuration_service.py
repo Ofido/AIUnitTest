@@ -28,6 +28,10 @@ class EnvironmentStatus:
 class ConfigurationService(BaseService):
     """Service for managing application configuration."""
 
+    def __repr__(self) -> str:
+        """Return a string representation of the service."""
+        return "ConfigurationService"
+
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         """
         Initialize the ConfigurationService.

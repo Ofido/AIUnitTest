@@ -53,14 +53,8 @@ class CoverageProcessingResult:
 class TestProcessingService(BaseService):
     """Service for processing test generation requests."""
 
-    llm_connector: LLMConnector[Any] | None
-    index_organizer: IndexOrganizer | None
-
-    def __init__(self, config: dict[str, Any] | None = None) -> None:
-        """Initialize the test processing service."""
-        super().__init__(config)
-        self.llm_connector = None
-        self.index_organizer = None
+    llm_connector: LLMConnector[Any] | None = None
+    index_organizer: IndexOrganizer | None = None
 
     def get_service_name(self) -> str:
         """Return the name of this service for logging purposes."""
@@ -81,6 +75,11 @@ class TestProcessingService(BaseService):
             self.index_organizer = IndexOrganizerFactory.create_from_config_file(
                 {"tool": {"ai-unit-test": {"indexing": indexing_config}}}
             )
+
+            if "index_directory" in indexing_config:
+                index_path = Path(indexing_config["index_directory"])
+                if index_path.exists() and self.index_organizer:
+                    await self.index_organizer.load_index(index_path)
 
             self.logger.info("Test processing dependencies initialized")
 
@@ -301,7 +300,7 @@ class TestProcessingService(BaseService):
         request = LLMRequest(
             system_message=system_msg,
             user_message=user_msg,
-            model=self.config.get("llm", {}).get("model", "gpt-4o-mini"),
+            model=self.config.get("llm", {}).get("model", "gpt-5-nano"),
             temperature=self.config.get("llm", {}).get("temperature", 0.1),
         )
 
@@ -337,29 +336,20 @@ class TestProcessingService(BaseService):
         test_code: str,
         other_tests_content: str,
     ) -> str:
-        """Build user message for LLM with all context."""
-        return f"""Here is the information for the test generation:
-
-<file_to_be_tested>
-{file_name}
-</file_to_be_tested>
-
-<uncovered_lines>
-{coverage_lines}
-</uncovered_lines>
-
-<source_code_chunk>
-{source_code}
-</source_code_chunk>
-
-<existing_tests>
-{test_code}
-</existing_tests>
-
-<style_reference_tests>
-{other_tests_content}
-</style_reference_tests>
-"""
+        """Build user message for LLM with all context (ajustado para melhor codegen)."""
+        return (
+            f"Arquivo a ser testado: {file_name}\n"
+            f"Linhas não cobertas: {coverage_lines}\n"
+            f"###\n"
+            f"Código fonte:\n{source_code}\n"
+            f"###\n"
+            f"Testes existentes:\n{test_code}\n"
+            f"###\n"
+            f"Referência de estilo:\n{other_tests_content}\n"
+            f"###\n"
+            "Gere apenas o código do novo teste para cobrir as linhas acima.\n"
+            "Não inclua explicações, comentários ou markdown."
+        )
 
     def _create_empty_test_file_content(self, test_style: str, source_file_path: Path) -> str:
         """Create empty test file content based on style."""

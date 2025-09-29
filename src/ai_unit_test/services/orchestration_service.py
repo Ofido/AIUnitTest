@@ -101,6 +101,7 @@ class OrchestrationService(BaseService):
         tests_folder: str | None = None,
         coverage_file: str = ".coverage",
         auto_discovery: bool = False,
+        index_directory: str | None = None,  # Add this line
     ) -> dict[str, Any]:
         """Run complete test generation workflow."""
         workflow_start_time = asyncio.get_event_loop().time()
@@ -116,11 +117,12 @@ class OrchestrationService(BaseService):
             env_status = self.config_service.validate_environment()
             self.logger.debug(f"Environment validation: {env_status}")
 
-            # Step 3: Initialize test processing service
             test_config = {
                 "llm": self.config_service.get_llm_config(),
                 "indexing": self.config_service.get_indexing_config(),
             }
+            if index_directory:
+                test_config["indexing"]["index_directory"] = index_directory
 
             async with TestProcessingService(test_config) as test_service:
                 # Step 4: Process missing coverage
@@ -166,15 +168,15 @@ class OrchestrationService(BaseService):
         self.logger.info("Starting index creation workflow")
         workflow_start_time = asyncio.get_event_loop().time()
 
-        index_path = Path(index_directory)
-        if index_path.exists() and not force_rebuild:
-            return {
-                "status": "skipped",
-                "message": f"Index already exists at {index_directory}. Use --force to rebuild.",
-                "workflow_duration_seconds": asyncio.get_event_loop().time() - workflow_start_time,
-            }
-
         try:
+            index_path = Path(index_directory)
+            if index_path.exists() and not force_rebuild:
+                return {
+                    "status": "skipped",
+                    "message": f"Index already exists at {index_directory}. Use --force to rebuild.",
+                    "workflow_duration_seconds": asyncio.get_event_loop().time() - workflow_start_time,
+                }
+
             # Initialize LLM and Indexing services
             llm_config = self.config_service.get_llm_config()
             llm_connector = LLMConnectorFactory.create_from_config_file({"tool": {"ai-unit-test": {"llm": llm_config}}})

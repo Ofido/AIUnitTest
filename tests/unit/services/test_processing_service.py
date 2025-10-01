@@ -9,7 +9,6 @@ from ai_unit_test.core.exceptions import TestGenerationError
 from ai_unit_test.services.processing_service import CoverageProcessingResult, FileTestResult, TestProcessingService
 
 
-@pytest.mark.asyncio
 class TestFileTestResult:
     """Test cases for FileTestResult dataclass."""
 
@@ -46,7 +45,6 @@ class TestFileTestResult:
         assert result.new_test_length is None
 
 
-@pytest.mark.asyncio
 class TestCoverageProcessingResult:
     """Test cases for CoverageProcessingResult dataclass."""
 
@@ -80,7 +78,6 @@ class TestCoverageProcessingResult:
         assert result.file_results == {}
 
 
-@pytest.mark.asyncio
 class TestTestProcessingService:
     """Test cases for TestProcessingService class."""
 

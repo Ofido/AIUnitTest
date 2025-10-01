@@ -250,4 +250,4 @@ async def test_faiss_organizer_various(monkeypatch: pytest.MonkeyPatch, tmp_path
     org3._index_loaded = True
     stats = await org3.get_index_stats()
     assert isinstance(stats, IndexStats)
-    assert stats.total_documents == 0 or hasattr(stats, "total_documents") or True
+    assert stats.total_documents == 0 or hasattr(stats, "total_documents")

@@ -2,7 +2,7 @@
 
 ## Como rodar os testes
 
-- Use o comando: `make tests`
+- Use o comando: `make test`
 - Certifique-se de que todas as dependências do `requirements.txt` estejam instaladas.
 - Os testes estão localizados na pasta `tests/`.
 

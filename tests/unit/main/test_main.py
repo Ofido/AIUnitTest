@@ -13,10 +13,11 @@ from ai_unit_test.main import CONFIG_FILE_OPTION, LOG_FILE_OPTION, VERBOSE_OPTIO
 class TestMainFunction:
     """Test cases for the main function."""
 
-    def test_main_successful_initialization(self) -> None:
+    def test_main_successful_initialization(self, tmp_path: Path) -> None:
         """Test successful system initialization."""
         mock_ctx = Mock(spec=typer.Context)
         mock_ctx.invoked_subcommand = "some_command"
+        log_file = tmp_path / "test.log"
 
         with (
             patch("ai_unit_test.main.SystemOrchestrator") as mock_orchestrator_class,
@@ -29,10 +30,10 @@ class TestMainFunction:
             mock_logger = Mock()
             mock_get_logger.return_value = mock_logger
 
-            main(mock_ctx, verbose=True, log_file=Path("/tmp/test.log"), config_file=Path("config.toml"))  # nosec
+            main(mock_ctx, verbose=True, log_file=log_file, config_file=Path("config.toml"))
 
             mock_orchestrator.validate_system_requirements.assert_called_once()
-            mock_orchestrator.setup_comprehensive_logging.assert_called_once_with(True, Path("/tmp/test.log"))  # nosec
+            mock_orchestrator.setup_comprehensive_logging.assert_called_once_with(True, log_file)
             mock_orchestrator.setup_signal_handlers.assert_called_once()
 
     def test_main_without_config_file(self) -> None:

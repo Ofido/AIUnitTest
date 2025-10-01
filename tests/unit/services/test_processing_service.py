@@ -90,9 +90,14 @@ class TestTestProcessingService:
         return TestProcessingService({})
 
     @pytest.fixture
-    def service_with_config(self) -> TestProcessingService:
+    def service_with_config(self, tmp_path: Path) -> TestProcessingService:
         """Create a TestProcessingService instance with config."""
-        config = {"llm": {"model": "gpt-4", "temperature": 0.2}, "indexing": {"index_directory": "/tmp/index"}}  # nosec
+        index_directory = tmp_path / "index"
+        index_directory.mkdir()
+        config = {
+            "llm": {"model": "gpt-4", "temperature": 0.2},
+            "indexing": {"index_directory": str(index_directory)},
+        }
         return TestProcessingService(config)
 
     def test_get_service_name(self, service: TestProcessingService) -> None:

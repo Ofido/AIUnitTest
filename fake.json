@@ -1,0 +1,1 @@
+{"files": {"src/included.py": {"missing_lines": [2, 5]}, "src/empty.py": {"missing_lines": []}, "other/outside.py": {"missing_lines": [10]}}}

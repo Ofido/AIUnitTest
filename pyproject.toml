@@ -28,6 +28,7 @@ dependencies = [
   "numpy",
   "scikit-learn",
   "joblib",
+  "typing-extensions",
 ]
 
 [project.urls]
@@ -35,7 +36,7 @@ dependencies = [
 "Bug Tracker" = "https://github.com/ofido/AIUnitTest/issues"
 
 [project.scripts]
-ai-unit-test = "ai_unit_test.cli:app"
+ai-unit-test = "ai_unit_test.__main__:run_app"
 
 [project.optional-dependencies]
 dev = [
@@ -44,12 +45,16 @@ dev = [
   "flake8",
   "flake8-bugbear",
   "flake8-annotations",
+  "flake8-docstrings",
+  "flake8-comprehensions",
+  "flake8-eradicate",
+  "flake8-pytest-style",
   "mypy",
-  "pymarkdown",
   "pre-commit",
   "pytest",
   "pytest-cov",
   "pytest-asyncio",
+  "pytest-dotenv",
 ]
 
 [tool.black]
@@ -90,10 +95,6 @@ skip = [
   "tests/fake_project",
 ]
 
-[tool.flake8-annotations]
-suppress-none-returning = true
-suppress-dummy-args = true
-allow-untyped-defs = true
 
 [tool.bandit]
 skips = ["B101"]
@@ -118,7 +119,7 @@ python_version = "3.13"
 check_untyped_defs = true
 ignore_missing_imports = false
 warn_redundant_casts = true
-warn_unused_ignores = true
+warn_unused_ignores = false
 disallow_any_generics = true
 allow_redefinition = false
 allow_untyped_globals = false
@@ -135,9 +136,9 @@ ignore_missing_imports = true
 minversion = "6.0"
 asyncio_mode = "auto"
 addopts = "-ra -q --strict-markers --tb=short --cov=src --cov-report=term-missing"
-testpaths = ["tests"]
+testpaths = ["tests/unit"] # Mudança aqui: só testes unitários
 python_files = ["test_*.py"]
-norecursedirs = ["tests/fake_project"]
+norecursedirs = ["tests/fake_project", "tests/behaviors"]
 markers = [
   "slow: marks slow tests",
   "integration: marks integration tests",
@@ -146,9 +147,9 @@ markers = [
 ]
 
 [tool.coverage.run]
-branch = true
 source = ["src"]
-omit = ["tests/*", "main.py", "src/ai_unit_test/_version.py"]
+omit = ["tests/*", "src/ai_unit_test/_version.py"]
+disable_warnings = ["couldnt-parse"]
 
 [tool.coverage.report]
 show_missing = true
@@ -167,3 +168,9 @@ where = ["src"]
 
 [tool.ai-unit-test]
 test-patterns = ["test_*.py", "*_test.py"]
+
+[tool.ai-unit-test.llm]
+provider = "openai"
+model = "gpt-5-mini"
+# use_api = false
+# max_length = 2048

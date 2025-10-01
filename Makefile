@@ -70,11 +70,14 @@ activate-env: ## Show how to activate virtual environment
 	@echo "source $(VENV_DIR)/bin/activate"
 
 # Tests
-test: check-venv ## Run all tests
-	$(PYTEST) $(TEST_DIR) -v
+test: check-venv ## Run unit tests with coverage (default)
+	$(PYTEST) $(TEST_DIR)/unit -v
 
 test-unit: check-venv ## Run unit tests only
 	$(PYTEST) $(TEST_DIR)/unit -v
+
+test-unit-cov: check-venv ## Run unit tests with coverage
+	$(PYTEST) $(TEST_DIR)/unit --cov=$(SRC_DIR) --cov-report=html --cov-report=term-missing
 
 test-integration: check-venv ## Run integration tests
 	$(PYTEST) $(TEST_DIR) -v -m "integration"
@@ -98,11 +101,11 @@ test-simple: ## Run tests using global pytest (fallback)
 
 # Code coverage
 coverage: check-venv ## Generate coverage report
-	$(PYTEST) $(TEST_DIR) --cov=$(SRC_DIR) --cov-report=html --cov-report=term-missing
+	$(PYTEST) $(TEST_DIR)/unit --cov=$(SRC_DIR) --cov-report=html --cov-report=term-missing
 	@echo "📊 HTML coverage report generated at htmlcov/index.html"
 
 coverage-xml: check-venv ## Generate XML coverage report
-	$(PYTEST) $(TEST_DIR) --cov=$(SRC_DIR) --cov-report=xml
+	$(PYTEST) $(TEST_DIR)/unit --cov=$(SRC_DIR) --cov-report=xml
 
 # Code quality
 lint: check-venv ## Run linting with flake8

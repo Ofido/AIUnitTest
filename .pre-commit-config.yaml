@@ -3,7 +3,7 @@ default_install_hook_types:
   - commit-msg
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-yaml
         args: ["--unsafe"]
@@ -23,6 +23,12 @@ repos:
         stages:
           - commit-msg
 
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.20.0
+    hooks:
+      - id: pyupgrade
+        args: ["--py313-plus"]
+
   - repo: https://github.com/pycqa/isort
     rev: 6.0.1
     hooks:
@@ -34,19 +40,13 @@ repos:
       - id: black
         args: ["--config", "pyproject.toml"]
 
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.20.0
-    hooks:
-      - id: pyupgrade
-        args: ["--py313-plus"]
-
   - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.18.1
     hooks:
       - id: markdownlint-cli2
 
   - repo: https://github.com/adamchainz/blacken-docs
-    rev: 1.19.1
+    rev: 1.20.0
     hooks:
       - id: blacken-docs
         additional_dependencies:
@@ -56,7 +56,15 @@ repos:
     rev: 7.3.0
     hooks:
       - id: flake8
-        additional_dependencies: [flake8-bugbear, flake8-annotations]
+        additional_dependencies:
+          [
+            flake8-bugbear,
+            flake8-annotations,
+            flake8-docstrings,
+            flake8-comprehensions,
+            flake8-eradicate,
+            flake8-pytest-style,
+          ]
         args: ["--config", ".flake8"]
 
   - repo: https://github.com/PyCQA/bandit
@@ -69,7 +77,7 @@ repos:
           - "pre-commit"
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.17.1
+    rev: v1.18.1
     hooks:
       - id: mypy
         entry: mypy --config-file pyproject.toml
@@ -77,5 +85,3 @@ repos:
         require_serial: true
         additional_dependencies:
           ["typer", "openai", "coverage", "pytest", "faiss-cpu", "scikit-learn"]
-        env:
-          PYTHONPATH: src

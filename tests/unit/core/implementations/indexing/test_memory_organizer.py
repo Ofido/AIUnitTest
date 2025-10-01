@@ -11,7 +11,7 @@ from ai_unit_test.core.exceptions import IndexError
 
 
 @pytest.mark.asyncio
-async def test_memory_organizer_basic_flow_and_errors() -> None:  # noqa
+async def test_memory_organizer_basic_flow_and_errors(tmp_path: Path) -> None:  # noqa
     """Test basic flow and error handling of memory organizer."""
     mod = importlib.import_module("ai_unit_test.core.implementations.indexing.memory_organizer")
     # find the main organizer class in the module
@@ -56,7 +56,7 @@ async def test_memory_organizer_basic_flow_and_errors() -> None:  # noqa
     meta = [{"text": "doc1"}, {"text": "doc2"}]
 
     # call create and verify index is loaded and index_info set
-    index_path = Path("/tmp/dummy_index")  # nosec
+    index_path = tmp_path / "dummy_index"
     model_name = "test_model"
     _ = await inst.create_index(emb, meta, index_path, model_name)
     assert getattr(inst, "_index_loaded", False) is True

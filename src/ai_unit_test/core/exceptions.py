@@ -52,4 +52,4 @@ class ValidationError(AIUnitTestError):
 class TestGenerationError(AIUnitTestError):
     """Raised when test generation process fails."""
 
-    pass
+    __test__ = False

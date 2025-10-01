@@ -53,6 +53,8 @@ class CoverageProcessingResult:
 class TestProcessingService(BaseService):
     """Service for processing test generation requests."""
 
+    __test__ = False
+
     llm_connector: LLMConnector[Any] | None = None
     index_organizer: IndexOrganizer | None = None
 

@@ -29,6 +29,15 @@ class LLMConnectorFactory:
         return list(cls._connectors.keys())
 
     @classmethod
+    def _get_install_hint(cls: type["LLMConnectorFactory"], provider: str) -> str:
+        """Get installation hint for missing provider."""
+        hints = {
+            "huggingface": "\nTip: Install with: pip install AIUnitTest[huggingface]",
+            "openai": "",  # OpenAI is a core dependency, no hint needed
+        }
+        return hints.get(provider, "")
+
+    @classmethod
     def create_connector(
         cls: type["LLMConnectorFactory"],
         provider: str,
@@ -42,7 +51,10 @@ class LLMConnectorFactory:
 
         if provider_lower not in cls._connectors:
             available = ", ".join(cls.get_available_connectors())
-            raise ConfigurationError(f"Unknown LLM provider: {provider}. " f"Available providers: {available}")
+            install_hint = cls._get_install_hint(provider_lower)
+            raise ConfigurationError(
+                f"Unknown LLM provider: {provider}. " f"Available providers: {available}" f"{install_hint}"
+            )
 
         # Merge with environment-based config
         merged_config = cls._merge_environment_config(provider_lower, config)

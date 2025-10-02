@@ -22,6 +22,31 @@
    pip install .
    ```
 
+   Or with optional dependencies:
+
+   ```bash
+   # Install with HuggingFace support
+   pip install .[huggingface]
+
+   # Install with FAISS indexing support
+   pip install .[faiss]
+
+   # Install all optional features
+   pip install .[all]
+
+   # Install development dependencies
+   pip install .[dev]
+   ```
+
+## Optional Features
+
+AIUnitTest includes several optional features:
+
+- **`huggingface`**: Enables HuggingFace model support for test generation
+- **`faiss`**: Enables semantic search and indexing of tests using FAISS
+- **`all`**: Installs all optional features
+- **`dev`**: Installs development tools (linters, formatters, type checkers)
+
 ## Running the Tool
 
 To run the AI Unit Test tool, use the following command:

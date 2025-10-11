@@ -29,11 +29,8 @@ jobs:
           restore-keys: |
             precommit-${{ runner.os }}-
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
       - name: Install project
-        run: pip install -e .
+        run: pip install -e .[all]
 
       - name: Run pre-commit hooks
         run: pre-commit run --show-diff-on-failure --all-files

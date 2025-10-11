@@ -340,17 +340,17 @@ class TestProcessingService(BaseService):
     ) -> str:
         """Build user message for LLM with all context (ajustado para melhor codegen)."""
         return (
-            f"Arquivo a ser testado: {file_name}\n"
-            f"Linhas não cobertas: {coverage_lines}\n"
+            f"File to be tested: {file_name}\n"
+            f"Uncovered lines: {coverage_lines}\n"
             f"###\n"
-            f"Código fonte:\n{source_code}\n"
+            f"Source code:\n{source_code}\n"
             f"###\n"
-            f"Testes existentes:\n{test_code}\n"
+            f"Existing tests:\n{test_code}\n"
             f"###\n"
-            f"Referência de estilo:\n{other_tests_content}\n"
+            f"Style reference:\n{other_tests_content}\n"
             f"###\n"
-            "Gere apenas o código do novo teste para cobrir as linhas acima.\n"
-            "Não inclua explicações, comentários ou markdown."
+            "Generate only the code for the new test to cover the lines above.\n"
+            "Do not include explanations, comments or markdown."
         )
 
     def _create_empty_test_file_content(self, test_style: str, source_file_path: Path) -> str:

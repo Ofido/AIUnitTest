@@ -65,8 +65,8 @@ llm_provider = "mock"
             from ai_unit_test.core.interfaces.index_organizer import IndexMetadata
 
             organizer = InMemoryIndexOrganizer({})
-            organizer.doc_ids = ["0"]  # Simula doc_ids preenchido
-            organizer._index_loaded = True  # Simula que o índice já foi carregado
+            organizer.doc_ids = ["0"]  # Simulates populated doc_ids
+            organizer._index_loaded = True  # Simulates that the index is already loaded
 
             # Initialize index_info
             organizer.index_info = IndexMetadata(

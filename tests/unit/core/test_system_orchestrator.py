@@ -43,7 +43,7 @@ def test_system_orchestrator_init_signal_and_excepthook(
 
     monkeypatch.setattr(sys, "exit", fake_exit)
 
-    # Capturar o handler real registrado por signal.signal
+    # Capture the real handler registered by signal.signal
     registered_handlers = {}
     original_signal = signal.signal
 
@@ -53,16 +53,16 @@ def test_system_orchestrator_init_signal_and_excepthook(
 
     monkeypatch.setattr(signal, "signal", capture_signal)
 
-    # Registrar handlers reais
+    # Register real handlers
     orchestrator.setup_signal_handlers()
 
-    # Simular ausência de event loop
+    # Simulate absence of event loop
     monkeypatch.setattr(asyncio, "get_running_loop", lambda: (_ for _ in ()).throw(RuntimeError()))
 
-    # Garantir que sys.exit lança SystemExit
+    # Ensure that sys.exit raises SystemExit
     monkeypatch.setattr(sys, "exit", lambda code=0: (_ for _ in ()).throw(SystemExit(code)))
 
-    # Chamar o handler real para SIGTERM e esperar SystemExit(1)
+    # Capture the real handler for SIGTERM and expect SystemExit(1)
     with pytest.raises(SystemExit) as si:
         registered_handlers[signal.SIGTERM](signal.SIGTERM, None)
     assert si.value.code == 1
@@ -73,11 +73,11 @@ def test_system_orchestrator_init_signal_and_excepthook(
     def fake_original_excepthook(t: type, v: BaseException, tb: object) -> None:
         called.append((t, v, tb))
 
-    # Definir excepthook global para o handler do orchestrator
+    # Set global excepthook for the orchestrator handler
     monkeypatch.setattr(sys, "excepthook", orchestrator.global_exception_handler)
     monkeypatch.setattr(sys, "__excepthook__", fake_original_excepthook)
 
-    # Test excepthook behavior for KeyboardInterrupt -> deve chamar __excepthook__ e sair com 130
+    # Test excepthook behavior for KeyboardInterrupt -> should call __excepthook__ and exit with 130
     with pytest.raises(SystemExit) as si2:
         sys.excepthook(KeyboardInterrupt, KeyboardInterrupt(), None)
     assert si2.value.code == 130
@@ -97,7 +97,7 @@ def test_system_orchestrator_init_signal_and_excepthook(
     err = capsys.readouterr().err
     assert "Error:" in err or "Application error" in err
 
-    # Test excepthook behavior for generic Exception -> imprime fatal e sai com código 1
+    # Test excepthook behavior for generic Exception -> prints fatal and exits with code 1
     with pytest.raises(SystemExit) as si5:
         sys.excepthook(Exception, Exception("boom"), None)
     assert si5.value.code == 1

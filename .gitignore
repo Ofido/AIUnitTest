@@ -208,3 +208,6 @@ __marimo__/
 tasks.md
 .vscode/settings.json
 src/ai_unit_test/_version.py
+need_to_do/
+valid_index_dir/*
+data/faiss_index/*

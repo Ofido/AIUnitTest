@@ -1,23 +1,13 @@
-import ast
+"""Helper functions for file operations."""
+
 import logging
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class Chunk:
-    name: str
-    type: Literal["class", "function"]
-    source_code: str
-    start_line: int
-    end_line: int
-
-
 def find_test_file(source_file_path: str, tests_folder: str) -> Path | None:
-    """Finds the corresponding test file for a given source file."""
+    """Find the corresponding test file for a given source file."""
     source_file = Path(source_file_path)
     test_file_name = f"test_{source_file.name}"
     # Look for the test file in the tests_folder and its subdirectories
@@ -28,8 +18,8 @@ def find_test_file(source_file_path: str, tests_folder: str) -> Path | None:
 
 
 def find_relevant_tests(source_file_path: str, tests_folder: str) -> str:
-    """
-    Finds the most relevant test file for a given source file and returns its content.
+    """Find the most relevant test file for a given source file and return its content.
+
     The primary strategy is to find a test file with a similar name.
     """
     test_file_path = find_test_file(source_file_path, tests_folder)
@@ -39,74 +29,52 @@ def find_relevant_tests(source_file_path: str, tests_folder: str) -> str:
 
 
 def read_file_content(file_path: Path | str) -> str:
-    """Reads the content of a file."""
+    """Read the content of a file."""
     try:
         with open(file_path) as f:
             return f.read()
-    except FileNotFoundError:
-        logger.warning(f"File not found: {file_path}")
+    except (FileNotFoundError, PermissionError) as e:
+        logger.warning(f"Error reading file {file_path}: {e}")
         return ""
 
 
 def write_file_content(file_path: Path, content: str, mode: str = "w") -> None:
-    """Writes content to a file."""
+    """Write content to a file."""
+    if mode not in ["w", "a", "w+", "a+"]:
+        raise ValueError(f"Invalid mode: {mode}")
     with open(file_path, mode) as f:
         f.write(content)
 
 
 def insert_new_test(existing_content: str, new_test: str) -> str:
+    """Insert a new test into the existing content.
+
+    The new test is inserted before the `if __name__ == "__main__":` block if it exists.
     """
-    Inserts a new test into the existing content, before the `if __name__ == "__main__":` block if it exists.
-    """
-    main_guard = 'if __name__ == "__main__":'
-    if main_guard in existing_content:
-        parts = existing_content.split(main_guard)
-        # Ensure there's a newline before the new test and before the main guard
-        new_test = "\n\n" + new_test.strip()
-        return parts[0].rstrip() + new_test + "\n\n" + main_guard + parts[1]
-    return existing_content + "\n" + new_test
+    # Handle both single and double-quoted main guards
+    candidates = [
+        "if __name__ == '__main__':",
+        'if __name__ == "__main__":',
+    ]
+    guard_idx = -1
+    guard_text = None
+    for cand in candidates:
+        idx = existing_content.find(cand)
+        if idx != -1 and (guard_idx == -1 or idx < guard_idx):
+            guard_idx = idx
+            guard_text = cand
 
+    new_test_clean = new_test.strip()
 
-def extract_function_source(file_path: str, function_name: str) -> str | None:
-    """Extracts the source code of a specific function from a file."""
-    try:
-        with open(file_path) as f:
-            file_content = f.read()
-            tree = ast.parse(file_content)
-            for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef) and node.name == function_name:
-                    return ast.get_source_segment(file_content, node)
-    except (FileNotFoundError, SyntaxError) as e:
-        logger.error(f"Error reading or parsing {file_path}: {e}")
-    return None
+    if guard_idx != -1 and guard_text is not None:
+        before = existing_content[:guard_idx]
+        after = existing_content[guard_idx + len(guard_text) :]
+        # Keep existing whitespace before the guard and insert the new test with spacing
+        result = before + "\n\n" + new_test_clean + "\n\n" + "\n" + guard_text + after
+        return result
 
-
-def get_source_code_chunks(file_path: Path) -> list[Chunk]:
-    """
-    Extracts top-level classes and functions from a Python file as code chunks.
-    """
-    chunks: list[Chunk] = []
-    try:
-        file_content = read_file_content(file_path)
-        tree = ast.parse(file_content)
-
-        for node in tree.body:
-            if isinstance(node, (ast.ClassDef, ast.FunctionDef)):
-                source_segment = ast.get_source_segment(file_content, node)
-                if source_segment is not None:
-                    chunks.append(
-                        Chunk(
-                            name=node.name,
-                            type="class" if isinstance(node, ast.ClassDef) else "function",
-                            source_code=source_segment,
-                            start_line=node.lineno,
-                            end_line=(
-                                node.end_lineno
-                                if hasattr(node, "end_lineno") and node.end_lineno is not None
-                                else node.lineno
-                            ),
-                        )
-                    )
-    except (FileNotFoundError, SyntaxError) as e:
-        logger.error(f"Error reading or parsing {file_path}: {e}")
-    return chunks
+    # No main guard - append with proper spacing
+    if existing_content.strip():
+        return existing_content.rstrip() + "\n\n" + new_test_clean
+    else:
+        return "\n" + new_test_clean

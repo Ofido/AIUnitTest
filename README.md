@@ -51,6 +51,46 @@ You can install the latest stable version from PyPI:
 pip install AIUnitTest
 ```
 
+### Optional Dependencies
+
+AIUnitTest supports optional features that can be installed as needed:
+
+#### Basic Installation (OpenAI only)
+
+```bash
+pip install AIUnitTest
+```
+
+#### With HuggingFace Support
+
+```bash
+pip install AIUnitTest[huggingface]
+```
+
+#### With FAISS Indexing Support
+
+```bash
+pip install AIUnitTest[faiss]
+```
+
+#### All Optional Features
+
+```bash
+pip install AIUnitTest[all]
+```
+
+#### Development Dependencies
+
+```bash
+pip install AIUnitTest[dev]
+```
+
+You can also combine multiple extras:
+
+```bash
+pip install AIUnitTest[huggingface,faiss]
+```
+
 ### From GitHub (for the latest development version)
 
 1. **Clone the repository:**
@@ -64,6 +104,8 @@ pip install AIUnitTest
 
     ```bash
     pip install -e .
+    # Or with optional dependencies:
+    pip install -e .[all]
     ```
 
 ## Usage
@@ -92,6 +134,20 @@ You can also generate a test for a single function:
 
 ```bash
 ai-unit-test func my_module/my_file.py my_function
+```
+
+### Indexing and Searching Tests
+
+You can index your tests for semantic search:
+
+```bash
+ai-unit-test index
+```
+
+And then search for tests related to a specific query:
+
+```bash
+ai-unit-test search "my search query"
 ```
 
 ### Command-Line Options

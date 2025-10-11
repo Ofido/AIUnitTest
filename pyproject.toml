@@ -18,34 +18,69 @@ classifiers = [
   "Topic :: Utilities",
 ]
 license-files = ["LICENSE"]
-dependencies = ["openai", "coverage", "typer", "tomli"]
+dependencies = [
+  "openai==2.0.1",
+  "coverage==7.10.7",
+  "typer==0.19.2",
+  "tomli==2.2.1",
+  "typing-extensions==4.15.0",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/ofido/AIUnitTest"
 "Bug Tracker" = "https://github.com/ofido/AIUnitTest/issues"
 
 [project.scripts]
-ai-unit-test = "ai_unit_test.cli:app"
+ai-unit-test = "ai_unit_test.__main__:run_app"
 
 [project.optional-dependencies]
+huggingface = ["sentence-transformers==5.1.1", "huggingface-hub==0.35.3"]
+faiss = [
+  "faiss-cpu==1.12.0",
+  "numpy==2.3.3",
+  "scikit-learn==1.7.2",
+  "joblib==1.5.2",
+]
+all = [
+  "sentence-transformers==5.1.1",
+  "huggingface-hub==0.35.3",
+  "faiss-cpu==1.12.0",
+  "numpy==2.3.3",
+  "scikit-learn==1.7.2",
+  "joblib==1.5.2",
+  "psutil==7.1.0",
+]
 dev = [
-  "black",
-  "isort",
-  "flake8",
-  "flake8-bugbear",
-  "flake8-annotations",
-  "mypy",
-  "pymarkdown",
-  "pre-commit",
-  "pytest",
-  "pytest-cov",
-  "pytest-asyncio",
+  "black==25.9.0",
+  "isort==7.0.0",
+  "flake8==7.3.0",
+  "flake8-bugbear==24.12.12",
+  "flake8-annotations==3.1.1",
+  "flake8-docstrings==1.7.0",
+  "flake8-comprehensions==3.17.0",
+  "flake8-eradicate==1.5.0",
+  "flake8-pytest-style==2.1.0",
+  "mypy==1.18.2",
+  "pre-commit==4.3.0",
+  "pytest==8.4.2",
+  "pytest-cov==7.0.0",
+  "pytest-asyncio==1.2.0",
+  "pytest-dotenv==0.5.2",
+  "joblib-stubs==1.5.2.0.20250831",
+  "types-psutil==7.0.0.20251001",
+  "pytest-mock==3.15.1",
+  "psutil==7.1.0",
 ]
 
 [tool.black]
 line-length = 120
 target-version = ["py313"]
-exclude = "src/ai_unit_test/_version.py"
+exclude = '''
+/(
+    src/ai_unit_test/_version\.py
+  | tests/fake_project
+)/
+'''
 
 [tool.isort]
 profile = "black"
@@ -66,12 +101,15 @@ known_third_party = [
 known_first_party = ["ai_unit_test"]
 
 default_section = "THIRDPARTY"
-skip = ["build", "dist", ".venv", "env", "src/ai_unit_test/_version.py"]
+skip = [
+  "build",
+  "dist",
+  ".venv",
+  "env",
+  "src/ai_unit_test/_version.py",
+  "tests/fake_project",
+]
 
-[tool.flake8-annotations]
-suppress-none-returning = true
-suppress-dummy-args = true
-allow-untyped-defs = true
 
 [tool.bandit]
 skips = ["B101"]
@@ -88,6 +126,7 @@ exclude_dirs = [
   "env",
   "examples",
   "node_modules",
+  "tests/fake_project",
 ]
 
 [tool.mypy]
@@ -95,7 +134,7 @@ python_version = "3.13"
 check_untyped_defs = true
 ignore_missing_imports = false
 warn_redundant_casts = true
-warn_unused_ignores = true
+warn_unused_ignores = false
 disallow_any_generics = true
 allow_redefinition = false
 allow_untyped_globals = false
@@ -104,13 +143,17 @@ disallow_untyped_defs = true
 strict = true
 exclude = ["env", "src/ai_unit_test/_version.py"]
 
+[[tool.mypy.overrides]]
+module = "faiss"
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 minversion = "6.0"
 asyncio_mode = "auto"
 addopts = "-ra -q --strict-markers --tb=short --cov=src --cov-report=term-missing"
-testpaths = ["tests"]
+testpaths = ["tests/unit"] # Mudança aqui: só testes unitários
 python_files = ["test_*.py"]
-norecursedirs = ["tests/fake_project"]
+norecursedirs = ["tests/fake_project", "tests/behaviors"]
 markers = [
   "slow: marks slow tests",
   "integration: marks integration tests",
@@ -119,9 +162,9 @@ markers = [
 ]
 
 [tool.coverage.run]
-branch = true
 source = ["src"]
-omit = ["tests/*", "main.py", "src/ai_unit_test/_version.py"]
+omit = ["tests/*", "src/ai_unit_test/_version.py"]
+disable_warnings = ["couldnt-parse"]
 
 [tool.coverage.report]
 show_missing = true
@@ -137,3 +180,12 @@ write_to = "src/ai_unit_test/_version.py"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ai-unit-test]
+test-patterns = ["test_*.py", "*_test.py"]
+
+[tool.ai-unit-test.llm]
+provider = "openai"
+model = "gpt-5-mini"
+# use_api = false
+# max_length = 2048

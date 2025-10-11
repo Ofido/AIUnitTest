@@ -30,7 +30,7 @@ jobs:
             precommit-${{ runner.os }}-
 
       - name: Install project
-        run: pip install -e .[dev]
+        run: pip install -e .[all,dev]
 
       - name: Run pre-commit hooks
         run: pre-commit run --show-diff-on-failure --all-files
@@ -51,7 +51,7 @@ jobs:
           cache: pip
 
       - name: Install project
-        run: pip install -e .[dev]
+        run: pip install -e .[all,dev]
 
       - name: Run all tests (without coverage)
         run: |
@@ -90,7 +90,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Install project
-        run: pip install -e .[dev]
+        run: pip install -e .[all,dev]
 
       - name: Run tests
         run: |

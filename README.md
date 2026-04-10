@@ -17,6 +17,20 @@
 AIUnitTest is a command-line tool that reads your `pyproject.toml` and test coverage
 data (`.coverage`) to generate and update missing Python unit tests using AI.
 
+## Status
+
+The current public CLI and README still describe the v1 workflow.
+
+AIUnitTest v2 is now being defined as a redesign around a tool-first test execution layer for coding agents.
+It will ship first through its own CLI client and later expose the same core to external agents.
+The product direction is to become the specialized testing layer that works with coding agents,
+instead of competing with them as a general-purpose agent.
+The v2 planning and architecture docs live in:
+
+- `docs/v2/README.md`
+- `docs/v2/architecture.md`
+- `docs/v2/implementation-plan.md`
+
 ## How it Works
 
 1. **Coverage Analysis**: The tool uses `coverage.py` to identify lines of code

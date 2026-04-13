@@ -139,6 +139,19 @@ class TestPytestValidator:
         cmd = mock_run.call_args[0][0]
         assert cmd[0] == sys.executable
 
+    @patch("ai_unit_test.v2.validation.runners.subprocess.run")
+    def test_writes_log_under_project_root(self, mock_run: MagicMock, tmp_path: Path) -> None:
+        """Test that validator logs are written under the project root."""
+        mock_run.return_value = MagicMock(returncode=0, stdout="1 passed\n", stderr="")
+
+        validator = PytestValidator(project_root=tmp_path)
+        result = validator.run(_make_application(["test_mod.py"]), _make_target())
+
+        assert result.log_path is not None
+        log_path = Path(result.log_path)
+        assert log_path.parent == tmp_path / ".ai-unit-test" / "logs"
+        assert log_path.read_text(encoding="utf-8") == "1 passed\n"
+
 
 class TestFeedbackSummarizer:
     """Test suite for FeedbackSummarizer."""

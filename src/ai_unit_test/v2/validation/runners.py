@@ -4,7 +4,7 @@ import logging
 import py_compile
 import subprocess  # nosec B404 -- controlled subprocess for pytest execution
 import sys
-import tempfile
+import uuid
 from pathlib import Path
 from typing import Protocol
 
@@ -126,6 +126,7 @@ class PytestValidator:
                 )
 
         except subprocess.TimeoutExpired:
+            Path(log_path).write_text("Timeout: pytest exceeded 120s limit", encoding="utf-8")
             return ValidationResult(
                 validator_name="pytest",
                 success=False,
@@ -143,11 +144,8 @@ class PytestValidator:
                 command_results=["FileNotFoundError: pytest executable not found"],
             )
 
-    @staticmethod
-    def _create_log_path() -> str:
-        """Create a temporary log file path."""
-        fd, path = tempfile.mkstemp(suffix=".log", prefix="v2_pytest_")
-        import os
-
-        os.close(fd)
-        return path
+    def _create_log_path(self) -> str:
+        """Create a project-scoped log file path."""
+        log_dir = self.project_root / ".ai-unit-test" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        return str(log_dir / f"v2_pytest_{uuid.uuid4().hex}.log")

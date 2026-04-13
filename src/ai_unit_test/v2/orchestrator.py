@@ -8,6 +8,7 @@ from ai_unit_test.v2.models import (
     PatchApplication,
     RunReport,
     RunRequest,
+    TargetSpec,
     ValidationResult,
 )
 from ai_unit_test.v2.patching.workspace import PatchApplier
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 class V2Orchestrator:
     """Coordinate the v2 workflow: target → context → backend → patch → validate → retry → report."""
 
-    def __init__(
+    def __init__(  # noqa: D107
         self,
         backend: ReasoningBackend,
         target_selector: TargetSelector,
@@ -70,10 +71,23 @@ class V2Orchestrator:
                     touched_files=[],
                     validation_history=[],
                 )
-                artifacts_dir = self.run_store.save(report)
+                self.run_store.save(report)
                 return report
 
-            candidate = await self.backend.propose_patch(context)
+            try:
+                candidate = await self.backend.propose_patch(context)
+            except Exception as exc:
+                validation_history.append(
+                    ValidationResult(
+                        validator_name="backend",
+                        success=False,
+                        summary=f"Backend error: {exc}",
+                        exit_code=-1,
+                    )
+                )
+                feedback = self.feedback_summarizer.summarize(validation_history, attempt)
+                logger.warning("Backend failed on attempt %d: %s", attempt, exc)
+                continue
 
             application = self.patch_applier.apply(candidate, request)
             last_application = application
@@ -108,7 +122,7 @@ class V2Orchestrator:
                     touched_files=application.applied_files,
                     validation_history=validation_history,
                 )
-                artifacts_dir = self.run_store.save(report, diff_text=application.diff_text)
+                self.run_store.save(report, diff_text=application.diff_text)
                 return report
 
             # Rollback failed attempt before retry
@@ -129,10 +143,13 @@ class V2Orchestrator:
             touched_files=last_application.applied_files if last_application else [],
             validation_history=validation_history,
         )
-        artifacts_dir = self.run_store.save(report, diff_text=last_application.diff_text if last_application else "")
+        self.run_store.save(
+            report,
+            diff_text=last_application.diff_text if last_application else "",
+        )
         return report
 
-    def _run_validators(self, application: PatchApplication, target: "TargetSpec") -> list[ValidationResult]:  # noqa: F821
+    def _run_validators(self, application: PatchApplication, target: TargetSpec) -> list[ValidationResult]:
         """Run all validators and return results. Treat ambiguous states as failures."""
         results: list[ValidationResult] = []
         for validator in self.validators:
@@ -145,8 +162,6 @@ class V2Orchestrator:
     @staticmethod
     def _empty_report(run_id: str, request: RunRequest, summary: str) -> RunReport:
         """Create an empty report for edge cases."""
-        from ai_unit_test.v2.models import TargetSpec
-
         return RunReport(
             run_id=run_id,
             target=TargetSpec(mode="explicit-file", files=[request.file_path]),

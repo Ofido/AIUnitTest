@@ -61,12 +61,13 @@ class TestPytestValidator:
     """Test suite for PytestValidator."""
 
     def test_no_test_files(self) -> None:
-        """Test that no test files returns success."""
+        """Test that no test files returns failure (prevents no-op success)."""
         validator = PytestValidator()
         result = validator.run(_make_application(["module.py"]), _make_target())
 
-        assert result.success is True
+        assert result.success is False
         assert "No test files" in result.summary
+        assert result.exit_code == -1
 
     @patch("ai_unit_test.v2.validation.runners.subprocess.run")
     def test_passing_tests(self, mock_run: MagicMock, tmp_path: Path) -> None:
@@ -126,6 +127,19 @@ class TestPytestValidator:
         cmd = mock_run.call_args[0][0]
         assert "--override-ini=addopts=" in cmd
 
+    @patch("ai_unit_test.v2.validation.runners.subprocess.run")
+    def test_uses_sys_executable(self, mock_run: MagicMock, tmp_path: Path) -> None:
+        """Test that pytest is invoked via sys.executable, not hardcoded python."""
+        import sys
+
+        mock_run.return_value = MagicMock(returncode=0, stdout="ok", stderr="")
+
+        validator = PytestValidator(project_root=tmp_path)
+        validator.run(_make_application(["test_mod.py"]), _make_target())
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[0] == sys.executable
+
 
 class TestFeedbackSummarizer:
     """Test suite for FeedbackSummarizer."""
@@ -133,7 +147,9 @@ class TestFeedbackSummarizer:
     def test_summarize(self) -> None:
         """Test summarizing failed results."""
         results = [
-            ValidationResult(validator_name="syntax", success=False, summary="Syntax error.", command_results=["line 5"]),
+            ValidationResult(
+                validator_name="syntax", success=False, summary="Syntax error.", command_results=["line 5"]
+            ),
             ValidationResult(validator_name="pytest", success=True, summary="ok"),
         ]
         summarizer = FeedbackSummarizer()

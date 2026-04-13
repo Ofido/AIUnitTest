@@ -1,6 +1,5 @@
 """Tests for v2 target selectors."""
 
-import tempfile
 from pathlib import Path
 
 import pytest

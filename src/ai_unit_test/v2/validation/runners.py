@@ -3,6 +3,7 @@
 import logging
 import py_compile
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Protocol
@@ -58,25 +59,30 @@ class PytestValidator:
     """Run targeted pytest on applied test files."""
 
     def __init__(self, project_root: Path | None = None) -> None:
+        """Initialize with project root for test discovery."""
         self.project_root = project_root or Path.cwd()
 
     def run(self, application: PatchApplication, target: TargetSpec) -> ValidationResult:
         """Run pytest on the applied test files."""
-        test_files = [f for f in application.applied_files if Path(f).name.startswith("test_") or Path(f).name.endswith("_test.py")]
+        test_files = [
+            f
+            for f in application.applied_files
+            if Path(f).name.startswith("test_") or Path(f).name.endswith("_test.py")
+        ]
 
         if not test_files:
             return ValidationResult(
                 validator_name="pytest",
-                success=True,
-                summary="No test files to validate.",
-                exit_code=0,
+                success=False,
+                summary="No test files in applied patch. Nothing to validate.",
+                exit_code=-1,
                 command_results=[],
             )
 
         log_path = self._create_log_path()
 
         cmd = [
-            "python",
+            sys.executable,
             "-m",
             "pytest",
             *test_files,

@@ -163,7 +163,9 @@ Planned interface:
 
 ```python
 class ContextBuilder(Protocol):
-    def build(self, target: TargetSpec, feedback: list[str] | None = None) -> ContextBundle: ...
+    def build(
+        self, target: TargetSpec, feedback: list[str] | None = None
+    ) -> ContextBundle: ...
 ```
 
 ### Reasoning Backend
@@ -194,7 +196,9 @@ Planned interface:
 
 ```python
 class PatchApplier(Protocol):
-    def apply(self, candidate: PatchCandidate, request: RunRequest) -> PatchApplication: ...
+    def apply(
+        self, candidate: PatchCandidate, request: RunRequest
+    ) -> PatchApplication: ...
 ```
 
 Guardrails for the first cut:
@@ -222,7 +226,9 @@ Planned interface:
 
 ```python
 class Validator(Protocol):
-    def run(self, application: PatchApplication, target: TargetSpec) -> ValidationResult: ...
+    def run(
+        self, application: PatchApplication, target: TargetSpec
+    ) -> ValidationResult: ...
 ```
 
 ### Repair Loop Controller

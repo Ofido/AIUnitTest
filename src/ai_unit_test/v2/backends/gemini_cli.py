@@ -30,9 +30,16 @@ class GeminiCliBackend:
             )
             stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
             raw_output = stdout.decode("utf-8", errors="replace")
+
+            if proc.returncode != 0:
+                err_text = stderr.decode("utf-8", errors="replace").strip()
+                raise RuntimeError(f"Gemini CLI exited with code {proc.returncode}: {err_text or raw_output[:200]}")
+
+            if not raw_output.strip():
+                raise RuntimeError("Gemini CLI returned empty output.")
         except FileNotFoundError:
             raise RuntimeError("gemini CLI not found. Install Gemini CLI first.")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             raise RuntimeError("Gemini CLI timed out after 300 seconds.")
 
         return self._parse_response(raw_output)
@@ -41,7 +48,7 @@ class GeminiCliBackend:
         """Build a structured prompt from a ContextBundle."""
         parts: list[str] = []
         parts.append("Generate Python unit tests for the following source code.")
-        parts.append("Respond with JSON: {\"plan_summary\": \"...\", \"files\": {\"path\": \"content\"}}")
+        parts.append('Respond with JSON: {"plan_summary": "...", "files": {"path": "content"}}')
         parts.append("")
 
         for path, content in context.source_snippets.items():
@@ -127,7 +134,8 @@ class GeminiCliBackend:
         """Check if the Gemini CLI backend is available."""
         try:
             proc = await asyncio.create_subprocess_exec(
-                "gemini", "--version",
+                "gemini",
+                "--version",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )

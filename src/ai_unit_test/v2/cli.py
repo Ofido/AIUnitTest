@@ -94,10 +94,14 @@ def run(
         raise typer.Exit(1)
 
 
+LAST_RUN_OPTION = typer.Option(True, "--last-run", help="Show the last run report.")
+REPORT_JSON_OPTION = typer.Option(False, "--json", help="Output report as JSON.")
+
+
 @v2_app.command()
 def report(
-    last_run: bool = typer.Option(True, "--last-run", help="Show the last run report."),
-    json_output: bool = typer.Option(False, "--json", help="Output report as JSON."),
+    last_run: bool = LAST_RUN_OPTION,
+    json_output: bool = REPORT_JSON_OPTION,
 ) -> None:
     """Display a previous run report."""
     store = RunStore()

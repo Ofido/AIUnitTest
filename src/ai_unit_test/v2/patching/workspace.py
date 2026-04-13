@@ -14,6 +14,7 @@ class PatchApplier:
     """Apply patch candidates with test-file-first guardrails and rollback."""
 
     def __init__(self, test_patterns: list[str] | None = None) -> None:
+        """Initialize with test file name patterns."""
         self.test_patterns = test_patterns or ["test_*.py", "*_test.py"]
         self._snapshots: dict[str, str] = {}
 
@@ -23,15 +24,9 @@ class PatchApplier:
         diff_parts: list[str] = []
         self._snapshots.clear()
 
-        for file_path in candidate.touched_files:
-            path = Path(file_path)
-
-            if not self._is_test_file(path) and not request.allow_source_edits:
-                return PatchApplication(
-                    candidate=candidate,
-                    success=False,
-                    error=f"Refused to write non-test file: {file_path}. Use --allow-source-edits to override.",
-                )
+        error = self._check_guardrails(candidate.touched_files, request)
+        if error:
+            return PatchApplication(candidate=candidate, success=False, error=error)
 
         if request.dry_run:
             return PatchApplication(
@@ -44,6 +39,20 @@ class PatchApplier:
 
         try:
             file_contents = self._parse_patch_text(candidate.patch_text)
+
+            if not file_contents:
+                return PatchApplication(
+                    candidate=candidate,
+                    applied_files=[],
+                    diff_text="",
+                    success=False,
+                    error="Patch produced no parseable files.",
+                )
+
+            # Validate parsed paths against test-file guardrail
+            error = self._check_guardrails(list(file_contents.keys()), request)
+            if error:
+                return PatchApplication(candidate=candidate, success=False, error=error)
 
             for file_path, content in file_contents.items():
                 path = Path(file_path)
@@ -74,6 +83,18 @@ class PatchApplier:
                 success=False,
                 error=f"Patch application failed: {exc}",
             )
+
+    def _check_guardrails(self, file_paths: list[str], request: RunRequest) -> str | None:
+        """Check that all file paths pass the test-file-first guardrail.
+
+        Returns an error message if any file is rejected, None if all pass.
+        """
+        if request.allow_source_edits:
+            return None
+        for file_path in file_paths:
+            if not self._is_test_file(Path(file_path)):
+                return f"Refused to write non-test file: {file_path}. Use --allow-source-edits to override."
+        return None
 
     def rollback(self) -> None:
         """Restore all snapshotted files to their original state."""

@@ -19,13 +19,17 @@ class BackendRegistry:
     """In-memory registry for v2 reasoning backends."""
 
     def __init__(self) -> None:
+        """Initialize an empty backend registry."""
         self._backends: dict[str, ReasoningBackend] = {}
 
     def register(self, backend: ReasoningBackend) -> None:
+        """Register a backend instance by its name."""
         self._backends[backend.name] = backend
 
     def get(self, name: str) -> ReasoningBackend:
+        """Retrieve a registered backend by name."""
         return self._backends[name]
 
     def list_names(self) -> list[str]:
+        """Return sorted list of registered backend names."""
         return sorted(self._backends.keys())

@@ -1,6 +1,6 @@
 """Tests for V2Orchestrator."""
 
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -59,8 +59,8 @@ def _make_orchestrator(
     validator = MagicMock()
     validator.run.side_effect = validation_results
 
-    from ai_unit_test.v2.validation.feedback import FeedbackSummarizer
     from ai_unit_test.v2.reporting.store import RunStore
+    from ai_unit_test.v2.validation.feedback import FeedbackSummarizer
 
     store = MagicMock(spec=RunStore)
     store.generate_run_id.return_value = "test-run-123"
@@ -128,7 +128,9 @@ class TestV2Orchestrator:
 
         # Make second attempt succeed
         success_app = PatchApplication(
-            candidate=PatchCandidate(backend_name="mock", plan_summary="x", patch_text="y", touched_files=["test_mod.py"]),
+            candidate=PatchCandidate(
+                backend_name="mock", plan_summary="x", patch_text="y", touched_files=["test_mod.py"]
+            ),
             applied_files=["test_mod.py"],
             diff_text="diff",
             success=True,
@@ -137,7 +139,7 @@ class TestV2Orchestrator:
 
         # Override validator for second attempt
         request = RunRequest(file_path="mod.py", backend_name="mock-backend", max_attempts=2)
-        report = await orch.run(request)
+        await orch.run(request)
 
         assert backend.propose_patch.call_count == 2
         applier.rollback.assert_called()
@@ -172,3 +174,16 @@ class TestV2Orchestrator:
         assert report.success is False
         assert "exhausted" in report.final_summary.lower()
         store.save.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_backend_error_triggers_retry(self) -> None:
+        """Test that backend exceptions are caught and trigger retry."""
+        orch, backend, _, _, store = _make_orchestrator()
+        backend.propose_patch = AsyncMock(side_effect=RuntimeError("Backend crashed"))
+        request = RunRequest(file_path="mod.py", backend_name="mock-backend", max_attempts=2)
+
+        report = await orch.run(request)
+
+        assert report.success is False
+        assert backend.propose_patch.call_count == 2
+        assert any(v.validator_name == "backend" for v in report.validation_history)

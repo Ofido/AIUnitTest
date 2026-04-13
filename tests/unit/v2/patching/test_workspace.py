@@ -128,3 +128,30 @@ class TestPatchApplier:
         assert applier._is_test_file(Path("module_test.py")) is True
         assert applier._is_test_file(Path("module.py")) is False
         assert applier._is_test_file(Path("conftest.py")) is False
+
+    def test_empty_patch_text_fails(self) -> None:
+        """Test that unparseable/empty patch text fails explicitly."""
+        candidate = PatchCandidate(
+            backend_name="test",
+            plan_summary="bad output",
+            patch_text="just some text without file markers",
+            touched_files=[],
+        )
+        applier = PatchApplier()
+        result = applier.apply(candidate, self._make_request())
+
+        assert result.success is False
+        assert "no parseable files" in (result.error or "").lower()
+
+    def test_whitespace_only_patch_fails(self) -> None:
+        """Test that whitespace-only patch text fails."""
+        candidate = PatchCandidate(
+            backend_name="test",
+            plan_summary="empty",
+            patch_text="   \n\n  ",
+            touched_files=[],
+        )
+        applier = PatchApplier()
+        result = applier.apply(candidate, self._make_request())
+
+        assert result.success is False

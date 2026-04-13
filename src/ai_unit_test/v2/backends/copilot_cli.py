@@ -32,9 +32,16 @@ class CopilotCliBackend:
             )
             stdout, stderr = await asyncio.wait_for(proc.communicate(input=prompt.encode()), timeout=300)
             raw_output = stdout.decode("utf-8", errors="replace")
+
+            if proc.returncode != 0:
+                err_text = stderr.decode("utf-8", errors="replace").strip()
+                raise RuntimeError(f"Copilot CLI exited with code {proc.returncode}: {err_text or raw_output[:200]}")
+
+            if not raw_output.strip():
+                raise RuntimeError("Copilot CLI returned empty output.")
         except FileNotFoundError:
             raise RuntimeError("gh CLI not found. Install GitHub CLI and authenticate with 'gh auth login'.")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             raise RuntimeError("Copilot CLI timed out after 300 seconds.")
 
         return self._parse_response(raw_output)
@@ -43,7 +50,7 @@ class CopilotCliBackend:
         """Build a structured prompt from a ContextBundle."""
         parts: list[str] = []
         parts.append("Generate Python unit tests for the following source code.")
-        parts.append("Respond with JSON: {\"plan_summary\": \"...\", \"files\": {\"path\": \"content\"}}")
+        parts.append('Respond with JSON: {"plan_summary": "...", "files": {"path": "content"}}')
         parts.append("")
 
         for path, content in context.source_snippets.items():
@@ -129,7 +136,9 @@ class CopilotCliBackend:
         """Check if the Copilot CLI backend is available."""
         try:
             proc = await asyncio.create_subprocess_exec(
-                "gh", "--version",
+                "gh",
+                "copilot",
+                "--version",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )

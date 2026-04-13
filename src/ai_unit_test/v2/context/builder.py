@@ -10,7 +10,9 @@ from ai_unit_test.v2.models import ContextBundle, TargetSpec
 class ContextBuilder(Protocol):
     """Contract for context building strategies."""
 
-    def build(self, target: TargetSpec, feedback: list[str] | None = None, previous_patch: str | None = None) -> ContextBundle:
+    def build(
+        self, target: TargetSpec, feedback: list[str] | None = None, previous_patch: str | None = None
+    ) -> ContextBundle:
         """Build a context bundle for the given target."""
         ...
 
@@ -19,10 +21,13 @@ class FileContextBuilder:
     """Build context from source files, nearby tests, and project config."""
 
     def __init__(self, project_root: Path | None = None, test_patterns: list[str] | None = None) -> None:
+        """Initialize with project root and test file patterns."""
         self.project_root = project_root or Path.cwd()
         self.test_patterns = test_patterns or ["test_*.py", "*_test.py"]
 
-    def build(self, target: TargetSpec, feedback: list[str] | None = None, previous_patch: str | None = None) -> ContextBundle:
+    def build(
+        self, target: TargetSpec, feedback: list[str] | None = None, previous_patch: str | None = None
+    ) -> ContextBundle:
         """Build a context bundle from source files and related tests."""
         source_snippets: dict[str, str] = {}
         test_snippets: dict[str, str] = {}

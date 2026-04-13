@@ -17,6 +17,7 @@ class RunStore:
     """Persist run artifacts to disk."""
 
     def __init__(self, root: Path | None = None) -> None:
+        """Initialize with artifact storage root directory."""
         self.root = root or Path.cwd() / DEFAULT_ARTIFACTS_ROOT
 
     def generate_run_id(self) -> str:

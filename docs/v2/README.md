@@ -172,7 +172,8 @@ editor plugins, or generic review automation.
 
 The v2 MVP is implemented and tested. The following components are functional:
 
-- **Core models:** `RunRequest`, `TargetSpec`, `ContextBundle`, `PatchCandidate`, `PatchApplication`, `ValidationResult`, `RunReport`
+- **Core models:** `RunRequest`, `TargetSpec`, `ContextBundle`, `PatchCandidate`,
+  `PatchApplication`, `ValidationResult`, `RunReport`
 - **Target selection:** `ExplicitFileSelector` for explicit file targeting
 - **Context building:** `FileContextBuilder` reads source, related tests, and project config
 - **Backend adapters:** `CopilotCliBackend` and `GeminiCliBackend` (subprocess-based, JSON-first parsing)

@@ -60,10 +60,12 @@ class TestCopilotCliBackend:
     @pytest.mark.asyncio
     async def test_propose_patch_json_response(self) -> None:
         """Test parsing a JSON response."""
-        response = json.dumps({
-            "plan_summary": "Add tests for hello",
-            "files": {"test_mod.py": "def test_hello(): pass"},
-        })
+        response = json.dumps(
+            {
+                "plan_summary": "Add tests for hello",
+                "files": {"test_mod.py": "def test_hello(): pass"},
+            }
+        )
         mock_proc = AsyncMock()
         mock_proc.communicate = AsyncMock(return_value=(response.encode(), b""))
         mock_proc.returncode = 0
@@ -82,6 +84,7 @@ class TestCopilotCliBackend:
         response = "Some explanation\n```python\ndef test_x(): pass\n```\n"
         mock_proc = AsyncMock()
         mock_proc.communicate = AsyncMock(return_value=(response.encode(), b""))
+        mock_proc.returncode = 0
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
             backend = CopilotCliBackend()
@@ -94,6 +97,7 @@ class TestCopilotCliBackend:
         """Test handling of unparseable output."""
         mock_proc = AsyncMock()
         mock_proc.communicate = AsyncMock(return_value=(b"just text", b""))
+        mock_proc.returncode = 0
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
             backend = CopilotCliBackend()
@@ -126,6 +130,30 @@ class TestCopilotCliBackend:
         with patch("asyncio.create_subprocess_exec", side_effect=FileNotFoundError()):
             assert await CopilotCliBackend.is_available() is False
 
+    @pytest.mark.asyncio
+    async def test_nonzero_returncode_raises(self) -> None:
+        """Test that non-zero returncode raises RuntimeError."""
+        mock_proc = AsyncMock()
+        mock_proc.communicate = AsyncMock(return_value=(b"", b"error details"))
+        mock_proc.returncode = 1
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+            backend = CopilotCliBackend()
+            with pytest.raises(RuntimeError, match="exited with code 1"):
+                await backend.propose_patch(_make_context())
+
+    @pytest.mark.asyncio
+    async def test_empty_output_raises(self) -> None:
+        """Test that empty stdout raises RuntimeError."""
+        mock_proc = AsyncMock()
+        mock_proc.communicate = AsyncMock(return_value=(b"   ", b""))
+        mock_proc.returncode = 0
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+            backend = CopilotCliBackend()
+            with pytest.raises(RuntimeError, match="empty output"):
+                await backend.propose_patch(_make_context())
+
 
 class TestGeminiCliBackend:
     """Test suite for GeminiCliBackend."""
@@ -137,12 +165,15 @@ class TestGeminiCliBackend:
     @pytest.mark.asyncio
     async def test_propose_patch_json_response(self) -> None:
         """Test parsing a JSON response."""
-        response = json.dumps({
-            "plan_summary": "Add tests",
-            "files": {"test_mod.py": "def test_y(): pass"},
-        })
+        response = json.dumps(
+            {
+                "plan_summary": "Add tests",
+                "files": {"test_mod.py": "def test_y(): pass"},
+            }
+        )
         mock_proc = AsyncMock()
         mock_proc.communicate = AsyncMock(return_value=(response.encode(), b""))
+        mock_proc.returncode = 0
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
             backend = GeminiCliBackend()
@@ -164,3 +195,27 @@ class TestGeminiCliBackend:
         """Test availability check when gemini is missing."""
         with patch("asyncio.create_subprocess_exec", side_effect=FileNotFoundError()):
             assert await GeminiCliBackend.is_available() is False
+
+    @pytest.mark.asyncio
+    async def test_nonzero_returncode_raises(self) -> None:
+        """Test that non-zero returncode raises RuntimeError."""
+        mock_proc = AsyncMock()
+        mock_proc.communicate = AsyncMock(return_value=(b"", b"gemini error"))
+        mock_proc.returncode = 2
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+            backend = GeminiCliBackend()
+            with pytest.raises(RuntimeError, match="exited with code 2"):
+                await backend.propose_patch(_make_context())
+
+    @pytest.mark.asyncio
+    async def test_empty_output_raises(self) -> None:
+        """Test that empty stdout raises RuntimeError."""
+        mock_proc = AsyncMock()
+        mock_proc.communicate = AsyncMock(return_value=(b"", b""))
+        mock_proc.returncode = 0
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+            backend = GeminiCliBackend()
+            with pytest.raises(RuntimeError, match="empty output"):
+                await backend.propose_patch(_make_context())

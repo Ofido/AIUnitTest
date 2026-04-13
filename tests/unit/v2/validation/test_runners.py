@@ -1,5 +1,6 @@
 """Tests for v2 validation runners and feedback summarizer."""
 
+import subprocess  # nosec B404
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -95,8 +96,6 @@ class TestPytestValidator:
     @patch("ai_unit_test.v2.validation.runners.subprocess.run")
     def test_pytest_timeout(self, mock_run: MagicMock, tmp_path: Path) -> None:
         """Test that pytest timeout is handled."""
-        import subprocess
-
         mock_run.side_effect = subprocess.TimeoutExpired(cmd="pytest", timeout=120)
 
         validator = PytestValidator(project_root=tmp_path)

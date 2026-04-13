@@ -138,11 +138,11 @@ class TestValidationResult:
             summary="failed",
             exit_code=1,
             command_results=["error line"],
-            log_path="/tmp/log.txt",
+            log_path="/var/log/app/test.txt",
             coverage_delta=-2.5,
         )
         assert vr.exit_code == 1
-        assert vr.log_path == "/tmp/log.txt"
+        assert vr.log_path == "/var/log/app/test.txt"
 
 
 class TestRunReport:

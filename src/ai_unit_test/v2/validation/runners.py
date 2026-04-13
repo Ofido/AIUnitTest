@@ -2,7 +2,7 @@
 
 import logging
 import py_compile
-import subprocess
+import subprocess  # nosec B404 -- controlled subprocess for pytest execution
 import sys
 import tempfile
 from pathlib import Path
@@ -95,7 +95,7 @@ class PytestValidator:
         ]
 
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603
                 cmd,
                 capture_output=True,
                 text=True,

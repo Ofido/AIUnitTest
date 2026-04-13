@@ -87,6 +87,7 @@ class TestRunStore:
         md = (run_dir / "summary.md").read_text()
         assert "❌ Failed" in md
         assert "abc123" in md
+        assert "**syntax**" in md
 
 
 class TestTerminalRenderer:

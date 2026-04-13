@@ -28,6 +28,8 @@ class RunStore:
         run_dir = self.root / report.run_id
         run_dir.mkdir(parents=True, exist_ok=True)
 
+        report.artifacts_dir = str(run_dir)
+
         report_path = run_dir / "report.json"
         report_path.write_text(json.dumps(asdict(report), indent=2, default=str), encoding="utf-8")
 
@@ -94,10 +96,9 @@ class RunStore:
         if report.validation_history:
             lines.append("## Validation History")
             lines.append("")
-            for i, v in enumerate(report.validation_history, 1):
+            for v in report.validation_history:
                 icon = "✅" if v.success else "❌"
-                lines.append(f"### Attempt {i} — {v.validator_name}")
-                lines.append(f"{icon} {v.summary}")
-                lines.append("")
+                lines.append(f"- {icon} **{v.validator_name}**: {v.summary}")
+            lines.append("")
 
         return "\n".join(lines)

@@ -108,6 +108,20 @@ class TestV2Orchestrator:
         assert report.attempts == 0
 
     @pytest.mark.asyncio
+    async def test_dry_run_skips_backend(self) -> None:
+        """Test that dry-run does not call the backend."""
+        orch, backend, _, _, store = _make_orchestrator()
+        request = RunRequest(file_path="mod.py", backend_name="mock-backend", dry_run=True)
+
+        report = await orch.run(request)
+
+        assert report.success is True
+        assert report.attempts == 0
+        assert "Dry run" in report.final_summary
+        backend.propose_patch.assert_not_called()
+        store.save.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_patch_apply_failure_triggers_retry(self) -> None:
         """Test that patch application failure triggers retry."""
         orch, backend, _, applier, _ = _make_orchestrator(apply_success=False)

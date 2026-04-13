@@ -59,6 +59,20 @@ class V2Orchestrator:
 
             context = self.context_builder.build(target, feedback=feedback, previous_patch=previous_patch)
 
+            if request.dry_run:
+                report = RunReport(
+                    run_id=run_id,
+                    target=target,
+                    attempts=0,
+                    success=True,
+                    backend_name=self.backend.name,
+                    final_summary="Dry run: context assembled, no backend call made.",
+                    touched_files=[],
+                    validation_history=[],
+                )
+                artifacts_dir = self.run_store.save(report)
+                return report
+
             candidate = await self.backend.propose_patch(context)
 
             application = self.patch_applier.apply(candidate, request)
@@ -95,7 +109,6 @@ class V2Orchestrator:
                     validation_history=validation_history,
                 )
                 artifacts_dir = self.run_store.save(report, diff_text=application.diff_text)
-                report.artifacts_dir = str(artifacts_dir)
                 return report
 
             # Rollback failed attempt before retry
@@ -117,7 +130,6 @@ class V2Orchestrator:
             validation_history=validation_history,
         )
         artifacts_dir = self.run_store.save(report, diff_text=last_application.diff_text if last_application else "")
-        report.artifacts_dir = str(artifacts_dir)
         return report
 
     def _run_validators(self, application: PatchApplication, target: "TargetSpec") -> list[ValidationResult]:  # noqa: F821

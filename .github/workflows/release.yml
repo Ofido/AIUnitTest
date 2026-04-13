@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0 # Required for setuptools_scm
 
@@ -45,7 +45,7 @@ jobs:
           git push origin ${{ steps.get_next_version.outputs.NEXT_VERSION }}
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.9"
 
@@ -58,7 +58,7 @@ jobs:
         run: python -m build
 
       - name: Create GitHub Release
-        uses: ncipollo/release-action@v1
+        uses: ncipollo/release-action@v1.21.0
         with:
           tag: ${{ steps.get_next_version.outputs.NEXT_VERSION }}
           name: Release ${{ steps.get_next_version.outputs.NEXT_VERSION }}
@@ -66,7 +66,7 @@ jobs:
           artifacts: "dist/*"
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.13.0
+        uses: pypa/gh-action-pypi-publish@v1.14.0
 
       # - name: Set up Conda
       #   uses: conda-incubator/setup-miniconda@v3

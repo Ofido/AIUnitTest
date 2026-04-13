@@ -170,5 +170,17 @@ editor plugins, or generic review automation.
 
 ## Current status
 
-At this stage, v2 is defined and scaffolded, but not yet wired into the production CLI.
-Work should stay isolated from v1 until the first end-to-end workflow is reliable.
+The v2 MVP is implemented and tested. The following components are functional:
+
+- **Core models:** `RunRequest`, `TargetSpec`, `ContextBundle`, `PatchCandidate`, `PatchApplication`, `ValidationResult`, `RunReport`
+- **Target selection:** `ExplicitFileSelector` for explicit file targeting
+- **Context building:** `FileContextBuilder` reads source, related tests, and project config
+- **Backend adapters:** `CopilotCliBackend` and `GeminiCliBackend` (subprocess-based, JSON-first parsing)
+- **Patch application:** `PatchApplier` with test-file-first guardrails, rollback between retries
+- **Validation:** `SyntaxValidator` (py_compile) and `PytestValidator` (subprocess, overrides global addopts)
+- **Feedback:** `FeedbackSummarizer` for structured retry context
+- **Reporting:** `RunStore` (persists report.json, summary.md, patch.diff), `TerminalRenderer`, `JsonRenderer`
+- **Orchestrator:** `V2Orchestrator` wires the full loop with bounded retries
+- **CLI:** `v2 run`, `v2 report`, `v2 backends`, `v2 doctor` registered under the `v2` namespace
+
+Work stays isolated from v1. The v1 CLI remains fully functional.

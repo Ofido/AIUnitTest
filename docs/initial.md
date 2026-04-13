@@ -1,5 +1,8 @@
 # Initial Project Documentation
 
+This document describes the original v1 thesis of the project.
+For the current v2 redesign, see the documents under `docs/v2/`.
+
 This section describes the initial idea, objectives, and architectural overview of the AIUnitTest project.
 
 1. Objective

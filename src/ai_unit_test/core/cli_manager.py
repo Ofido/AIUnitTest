@@ -24,10 +24,12 @@ class CLIManager:
     def _register_commands(self) -> None:
         """Register CLI commands with the Typer app."""
         from ai_unit_test.cli import create_index, generate_tests, health_check
+        from ai_unit_test.v2.cli import v2_app
 
         self.app.command()(generate_tests)
         self.app.command()(create_index)
         self.app.command()(health_check)
+        self.app.add_typer(v2_app, name="v2")
 
     def run(self) -> None:
         """Run the CLI application."""

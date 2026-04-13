@@ -12,16 +12,16 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6.0.2
 
       - name: Setup Python 3.13 (with pip cache)
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.13"
           cache: pip # ativa cache de dependencies pip :contentReference[oaicite:1]{index=1}
 
       - name: Cache pre-commit environment
-        uses: actions/cache@v4
+        uses: actions/cache@v5.0.4
         id: precommit-cache
         with:
           path: ~/.cache/pre-commit/
@@ -43,9 +43,9 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6.0.2
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.13"
           cache: pip
@@ -62,7 +62,7 @@ jobs:
           pytest tests/unit --cov=src --cov-report=xml --cov-fail-under=70
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: coverage-report
           path: coverage.xml
@@ -81,8 +81,8 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v6.0.2
+      - uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.13"
           cache: pip
@@ -99,7 +99,7 @@ jobs:
 
       - name: Add label for dependencies
         id: fetch-metadata
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@v3.0.0
 
       - name: Label dependabot PR
         if: steps.fetch-metadata.outputs.dependency-type == 'direct:production'

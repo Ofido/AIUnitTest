@@ -323,8 +323,8 @@ The concrete incubation command shape should be:
 ai-unit-test v2 run --file path/to/module.py --backend copilot-cli
 ai-unit-test v2 run --diff --backend gemini-cli
 ai-unit-test v2 run --failing-test tests/unit/test_module.py::test_case --backend copilot-cli
-ai-unit-test v2 report --last-run
-ai-unit-test v2 backends list
+ai-unit-test v2 report
+ai-unit-test v2 backends
 ai-unit-test v2 doctor
 ```
 

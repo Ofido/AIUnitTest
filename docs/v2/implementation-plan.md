@@ -66,8 +66,8 @@ The first public command surface for v2 should stay namespaced so v1 remains sta
 ai-unit-test v2 run --file path/to/module.py --backend copilot-cli
 ai-unit-test v2 run --file path/to/module.py --backend gemini-cli --max-attempts 2
 ai-unit-test v2 run --file path/to/module.py --backend copilot-cli --dry-run
-ai-unit-test v2 report --last-run
-ai-unit-test v2 backends list
+ai-unit-test v2 report
+ai-unit-test v2 backends
 ai-unit-test v2 doctor
 ```
 

@@ -85,7 +85,7 @@ class V2Orchestrator:
                         exit_code=-1,
                     )
                 )
-                feedback = self.feedback_summarizer.summarize(validation_history, attempt)
+                feedback = self.feedback_summarizer.summarize([validation_history[-1]], attempt)
                 logger.warning("Backend failed on attempt %d: %s", attempt, exc)
                 continue
 
@@ -102,7 +102,7 @@ class V2Orchestrator:
                     )
                 )
                 previous_patch = candidate.patch_text
-                feedback = self.feedback_summarizer.summarize(validation_history, attempt)
+                feedback = self.feedback_summarizer.summarize([validation_history[-1]], attempt)
                 self.patch_applier.rollback()
                 continue
 

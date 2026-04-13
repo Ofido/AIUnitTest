@@ -16,7 +16,7 @@ class PatchApplier:
     def __init__(self, test_patterns: list[str] | None = None) -> None:
         """Initialize with test file name patterns."""
         self.test_patterns = test_patterns or ["test_*.py", "*_test.py"]
-        self._snapshots: dict[str, str] = {}
+        self._snapshots: dict[str, str | None] = {}
 
     def apply(self, candidate: PatchCandidate, request: RunRequest) -> PatchApplication:
         """Apply a patch candidate to disk, enforcing guardrails."""
@@ -59,7 +59,7 @@ class PatchApplier:
                 self._snapshot_file(path)
                 path.parent.mkdir(parents=True, exist_ok=True)
 
-                old_content = self._snapshots.get(str(path), "")
+                old_content = self._snapshots.get(str(path)) or ""
                 diff = self._compute_diff(old_content, content, file_path)
                 if diff:
                     diff_parts.append(diff)
@@ -100,7 +100,7 @@ class PatchApplier:
         """Restore all snapshotted files to their original state."""
         for file_path, original_content in self._snapshots.items():
             path = Path(file_path)
-            if original_content:
+            if original_content is not None:
                 path.write_text(original_content, encoding="utf-8")
             elif path.exists():
                 path.unlink()
@@ -117,7 +117,7 @@ class PatchApplier:
             if path.exists():
                 self._snapshots[key] = path.read_text(encoding="utf-8")
             else:
-                self._snapshots[key] = ""
+                self._snapshots[key] = None
 
     def _parse_patch_text(self, patch_text: str) -> dict[str, str]:
         """Parse patch text into file_path → content mapping.

@@ -155,3 +155,24 @@ class TestPatchApplier:
         result = applier.apply(candidate, self._make_request())
 
         assert result.success is False
+
+    def test_rollback_preserves_empty_files(self, tmp_path: Path) -> None:
+        """Test that rollback preserves pre-existing empty files."""
+        empty_file = tmp_path / "test_empty.py"
+        empty_file.write_text("", encoding="utf-8")
+
+        candidate = PatchCandidate(
+            backend_name="test",
+            plan_summary="overwrite",
+            patch_text=f"--- file: {empty_file}\ndef test(): pass\n",
+            touched_files=[str(empty_file)],
+        )
+        applier = PatchApplier()
+        applier.apply(candidate, self._make_request())
+
+        assert empty_file.read_text() == "def test(): pass\n"
+
+        applier.rollback()
+
+        assert empty_file.exists(), "Rollback should not delete pre-existing empty files"
+        assert empty_file.read_text() == ""

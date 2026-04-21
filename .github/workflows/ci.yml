@@ -99,7 +99,7 @@ jobs:
 
       - name: Add label for dependencies
         id: fetch-metadata
-        uses: dependabot/fetch-metadata@v3.0.0
+        uses: dependabot/fetch-metadata@v3.1.0
 
       - name: Label dependabot PR
         if: steps.fetch-metadata.outputs.dependency-type == 'direct:production'

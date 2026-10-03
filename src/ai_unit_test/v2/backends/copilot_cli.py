@@ -1,148 +1,89 @@
-"""Copilot CLI reasoning backend for AIUnitTest v2."""
+"""GitHub Copilot reasoning backend for AIUnitTest v2.
+
+This backend invokes `gh models run <model>`, which is the non-interactive,
+automation-friendly entry point for GitHub-hosted models (provided by the
+`gh-models` extension). The previous implementation used
+`gh copilot suggest`, but that command only generates shell/git/gh commands
+and is interactive, so it cannot produce Python tests.
+
+Requirements at runtime:
+  - GitHub CLI authenticated: `gh auth login`
+  - Models extension installed: `gh extension install github/gh-models`
+"""
 
 import asyncio
-import json
 import logging
-import re
+import os
 
-from ai_unit_test.v2.models import ContextBundle, PatchCandidate
+from ai_unit_test.v2.backends.base import BaseCliBackend
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_MODEL = "gpt-4o-mini"
 
-class CopilotCliBackend:
-    """Invoke GitHub Copilot CLI as a reasoning backend."""
+
+class CopilotCliBackend(BaseCliBackend):
+    """Invoke `gh models run` as a reasoning backend."""
 
     name: str = "copilot-cli"
 
-    async def propose_patch(self, context: ContextBundle) -> PatchCandidate:
-        """Send context to Copilot CLI and parse a patch candidate."""
-        prompt = self._build_prompt(context)
+    def __init__(self, model: str | None = None) -> None:
+        """Configure the model.
 
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                "gh",
-                "copilot",
-                "suggest",
-                "-t",
-                "shell",
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await asyncio.wait_for(proc.communicate(input=prompt.encode()), timeout=300)
-            raw_output = stdout.decode("utf-8", errors="replace")
+        Resolution order: explicit `model` arg > `AI_UNIT_TEST_COPILOT_MODEL`
+        env var > `DEFAULT_MODEL`.
+        """
+        self.model = model or os.environ.get("AI_UNIT_TEST_COPILOT_MODEL", DEFAULT_MODEL)
 
-            if proc.returncode != 0:
-                err_text = stderr.decode("utf-8", errors="replace").strip()
-                raise RuntimeError(f"Copilot CLI exited with code {proc.returncode}: {err_text or raw_output[:200]}")
+    def _subprocess_argv(self, prompt: str) -> list[str]:
+        """Return argv for `gh models run <model>`. Prompt is fed via stdin."""
+        return ["gh", "models", "run", self.model]
 
-            if not raw_output.strip():
-                raise RuntimeError("Copilot CLI returned empty output.")
-        except FileNotFoundError:
-            raise RuntimeError("gh CLI not found. Install GitHub CLI and authenticate with 'gh auth login'.")
-        except TimeoutError:
-            raise RuntimeError("Copilot CLI timed out after 300 seconds.")
-
-        return self._parse_response(raw_output)
-
-    def _build_prompt(self, context: ContextBundle) -> str:
-        """Build a structured prompt from a ContextBundle."""
-        parts: list[str] = []
-        parts.append("Generate Python unit tests for the following source code.")
-        parts.append('Respond with JSON: {"plan_summary": "...", "files": {"path": "content"}}')
-        parts.append("")
-
-        for path, content in context.source_snippets.items():
-            parts.append(f"--- Source: {path} ---")
-            parts.append(content)
-            parts.append("")
-
-        for path, content in context.test_snippets.items():
-            parts.append(f"--- Existing tests: {path} ---")
-            parts.append(content)
-            parts.append("")
-
-        if context.validator_feedback:
-            parts.append("--- Previous attempt feedback ---")
-            for line in context.validator_feedback:
-                parts.append(line)
-            parts.append("")
-
-        if context.previous_patch:
-            parts.append("--- Previous patch (failed) ---")
-            parts.append(context.previous_patch)
-            parts.append("")
-
-        return "\n".join(parts)
-
-    def _parse_response(self, raw_output: str) -> PatchCandidate:
-        """Parse backend output into a PatchCandidate."""
-        # Try JSON parsing first
-        try:
-            data = json.loads(raw_output)
-            return self._from_json(data)
-        except (json.JSONDecodeError, KeyError):
-            pass
-
-        # Try extracting JSON block from fenced code
-        json_match = re.search(r"```json\s*\n(.*?)```", raw_output, re.DOTALL)
-        if json_match:
-            try:
-                data = json.loads(json_match.group(1))
-                return self._from_json(data)
-            except (json.JSONDecodeError, KeyError):
-                pass
-
-        # Fallback: extract fenced python blocks
-        python_blocks = re.findall(r"```python\s*\n(.*?)```", raw_output, re.DOTALL)
-        if python_blocks:
-            patch_text = "\n\n".join(python_blocks)
-            return PatchCandidate(
-                backend_name=self.name,
-                plan_summary="Extracted from fenced Python blocks.",
-                patch_text=patch_text,
-                touched_files=[],
-            )
-
-        return PatchCandidate(
-            backend_name=self.name,
-            plan_summary="Could not parse structured output.",
-            patch_text=raw_output,
-            touched_files=[],
-        )
-
-    def _from_json(self, data: dict[str, object]) -> PatchCandidate:
-        """Build PatchCandidate from a JSON response."""
-        plan_summary = str(data.get("plan_summary", ""))
-        files: dict[str, str] = data.get("files", {})  # type: ignore[assignment]
-
-        patch_lines: list[str] = []
-        touched: list[str] = []
-        for path, content in files.items():
-            patch_lines.append(f"--- file: {path}")
-            patch_lines.append(str(content))
-            touched.append(path)
-
-        return PatchCandidate(
-            backend_name=self.name,
-            plan_summary=plan_summary,
-            patch_text="\n".join(patch_lines),
-            touched_files=touched,
+    def _not_found_message(self) -> str:
+        return (
+            "gh CLI or the gh-models extension is not available. Install GitHub CLI, "
+            "authenticate with 'gh auth login', and run "
+            "'gh extension install github/gh-models'."
         )
 
     @staticmethod
     async def is_available() -> bool:
-        """Check if the Copilot CLI backend is available."""
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                "gh",
-                "copilot",
-                "--version",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            await proc.communicate()
-            return proc.returncode == 0
-        except FileNotFoundError:
+        """Check that gh, the gh-models extension, and auth are all set up."""
+        if not await _gh_command_ok(["gh", "--version"]):
             return False
+
+        ext_stdout = await _gh_command_capture(["gh", "extension", "list"])
+        if ext_stdout is None or b"gh-models" not in ext_stdout:
+            return False
+
+        return await _gh_command_ok(["gh", "auth", "status"])
+
+
+async def _gh_command_ok(argv: list[str]) -> bool:
+    """Return True if argv exits with code 0."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *argv,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        await proc.communicate()
+        return proc.returncode == 0
+    except FileNotFoundError:
+        return False
+
+
+async def _gh_command_capture(argv: list[str]) -> bytes | None:
+    """Run argv and return stdout bytes on success, None on failure."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *argv,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await proc.communicate()
+        if proc.returncode != 0:
+            return None
+        return stdout
+    except FileNotFoundError:
+        return None
